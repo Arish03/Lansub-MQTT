@@ -58,6 +58,35 @@ To view live service logs:
 docker compose logs -f backend
 ```
 
+### Changing Default Ports (Resolving Port Conflicts on Your VM)
+
+If your VM already has services running on ports `3000`, `8000`, `1883`, or `5432`, you can easily change the host ports in your `.env` file without affecting internal container communication:
+
+1. Open `.env` and adjust the host port mapping variables to any available ports on your VM:
+   ```env
+   # Example: Custom Ports
+   FRONTEND_PORT=3080
+   BACKEND_PORT=8080
+   MQTT_PORT=18833
+   MQTT_WS_PORT=9002
+   DB_PORT=5433
+
+   # Update browser API endpoints to match your new BACKEND_PORT (and VM IP if accessing remotely)
+   NEXT_PUBLIC_API_URL=http://localhost:8080
+   NEXT_PUBLIC_WS_URL=ws://localhost:8080/ws
+   ```
+   *(Note: If accessing the dashboard from your laptop/browser via the VM's network IP, replace `localhost` with your VM IP, e.g., `http://192.168.1.100:8080`).*
+
+2. Rebuild and restart the containers with the new port mappings:
+   ```bash
+   docker compose up -d --build
+   ```
+
+3. Access your services on your new ports:
+   - **Frontend UI:** `http://localhost:3080` (or `http://<VM_IP>:3080`)
+   - **Backend API & Swagger:** `http://localhost:8080/docs`
+   - **MQTT Broker:** `localhost:18833`
+
 ---
 
 ## 2. User Authentication & Multi-Tenancy

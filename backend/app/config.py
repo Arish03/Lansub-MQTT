@@ -19,12 +19,7 @@ class Settings(BaseSettings):
     MQTT_DEFAULT_HOST: str = "mosquitto"
     MQTT_DEFAULT_PORT: int = 1883
 
-    CORS_ORIGINS: List[str] = [
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:8000",
-        "http://127.0.0.1:8000",
-    ]
+    CORS_ORIGINS: str = "*"
 
 
 settings = Settings()

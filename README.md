@@ -105,6 +105,28 @@ docker compose up --build -d
 | **MQTT Broker** | `localhost:1883` | Plain TCP (anonymous enabled by default) |
 | **PostgreSQL Database**| `localhost:5432` | User: `app`, Pass: `app_secret`, DB: `mqtt` |
 
+### 4. Customizing Ports (Avoiding VM Port Collisions)
+
+If your host VM already has other applications running on ports `3000`, `8000`, `1883`, or `5432`, modify the host ports in `.env`:
+
+```env
+FRONTEND_PORT=3080
+BACKEND_PORT=8080
+MQTT_PORT=18833
+MQTT_WS_PORT=9002
+DB_PORT=5433
+
+# Update clientside endpoints to match your new BACKEND_PORT
+NEXT_PUBLIC_API_URL=http://localhost:8080
+NEXT_PUBLIC_WS_URL=ws://localhost:8080/ws
+```
+
+Then rebuild and start the stack:
+```bash
+docker compose up -d --build
+```
+Your dashboard will now run on `http://localhost:3080` and backend API on `http://localhost:8080` without touching other services running on your VM!
+
 ---
 
 ## Running the Real-time IoT Simulator
