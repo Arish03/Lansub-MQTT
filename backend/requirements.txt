@@ -1,0 +1,17 @@
+fastapi
+uvicorn[standard]
+pydantic
+pydantic-settings
+email-validator
+sqlalchemy[asyncio]
+asyncpg
+alembic
+aiomqtt
+cryptography
+argon2-cffi
+pyjwt
+python-multipart
+jsonpath-ng
+httpx
+pytest
+pytest-asyncio
