@@ -1,16 +1,18 @@
 "use client";
 
 import { useAppStore, topicMatches } from "@/lib/store";
-import { Activity, Clock, AlertTriangle } from "lucide-react";
+import { Activity, Clock, AlertTriangle, Pencil, Trash2 } from "lucide-react";
 
 interface StatCardProps {
   key?: any;
   title: string;
   topic: string;
   unit?: string;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }
 
-export function StatCard({ title, topic, unit = "" }: StatCardProps) {
+export function StatCard({ title, topic, unit = "", onEdit, onDelete }: StatCardProps) {
   const topicState = useAppStore((state: any) => {
     if (state.topicData[topic]) return state.topicData[topic];
     for (const key of Object.keys(state.topicData)) {
@@ -21,9 +23,37 @@ export function StatCard({ title, topic, unit = "" }: StatCardProps) {
     return null;
   });
 
-  const value = topicState?.latestValue !== null && topicState?.latestValue !== undefined
-    ? topicState.latestValue
-    : (topicState?.latestPayload !== undefined ? JSON.stringify(topicState.latestPayload) : "--");
+  let displayValue: any = "--";
+  if (topicState?.latestValue !== null && topicState?.latestValue !== undefined) {
+    displayValue = topicState.latestValue;
+  } else if (topicState?.latestPayload !== undefined && topicState?.latestPayload !== null) {
+    const p = topicState.latestPayload;
+    if (typeof p === "number" || typeof p === "string") {
+      displayValue = p;
+    } else if (typeof p === "object") {
+      let parsed = p;
+      if (typeof p.raw === "string") {
+        try {
+          parsed = JSON.parse(p.raw);
+        } catch {
+          parsed = p.raw;
+        }
+      }
+      if (typeof parsed === "object" && parsed !== null) {
+        displayValue =
+          parsed.value ??
+          parsed.temp ??
+          parsed.temperature ??
+          parsed.reading ??
+          parsed.val ??
+          parsed.data ??
+          parsed.metric ??
+          (p.raw ? p.raw : JSON.stringify(p));
+      } else {
+        displayValue = parsed;
+      }
+    }
+  }
 
   const formattedTs = topicState?.latestTs
     ? new Date(topicState.latestTs).toLocaleTimeString()
@@ -33,7 +63,7 @@ export function StatCard({ title, topic, unit = "" }: StatCardProps) {
   const isAlert = !!alert;
 
   return (
-    <div className={`bg-white border rounded-xl p-5 shadow-sm transition-all flex flex-col justify-between ${
+    <div className={`bg-white border rounded-xl p-5 shadow-sm transition-all flex flex-col justify-between group ${
       isAlert
         ? alert === "high"
           ? "border-rose-300 ring-2 ring-rose-100 bg-rose-50/20"
@@ -53,6 +83,36 @@ export function StatCard({ title, topic, unit = "" }: StatCardProps) {
               {alert} alert
             </span>
           )}
+          {(onEdit || onDelete) && (
+            <div className="flex items-center gap-0.5 opacity-80 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity bg-slate-100 rounded-lg p-0.5">
+              {onEdit && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit();
+                  }}
+                  className="p-1 rounded text-slate-500 hover:text-blue-600 hover:bg-white transition-colors"
+                  title="Edit Widget"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+              )}
+              {onDelete && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete();
+                  }}
+                  className="p-1 rounded text-slate-500 hover:text-rose-600 hover:bg-white transition-colors"
+                  title="Delete Widget"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          )}
           <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
             isAlert
               ? alert === "high" ? "bg-rose-100 text-rose-600" : "bg-amber-100 text-amber-600"
@@ -66,7 +126,7 @@ export function StatCard({ title, topic, unit = "" }: StatCardProps) {
       <div className="my-4">
         <div className="flex items-baseline gap-2">
           <span className="text-3xl font-bold tracking-tight text-slate-900 font-mono">
-            {typeof value === "number" ? value.toLocaleString() : value}
+            {typeof displayValue === "number" ? displayValue.toLocaleString() : displayValue}
           </span>
           {unit && (
             <span className="text-sm font-semibold text-slate-500 uppercase">

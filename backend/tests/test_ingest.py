@@ -40,6 +40,24 @@ class TestIngestValueExtraction(unittest.TestCase):
         self.assertIsNone(value)
         self.assertEqual(parsed, {"raw": "not a json object"})
 
+    def test_extract_json_packet_when_format_is_number(self):
+        payload = b'{"value": 34.4, "temp": 34.4, "status": "normal"}'
+        parsed, value = extract_payload_and_value(payload, "number", None)
+        self.assertEqual(value, 34.4)
+        self.assertIsInstance(parsed, dict)
+        self.assertEqual(parsed.get("value"), 34.4)
+
+    def test_extract_json_fallback_keys_without_value_path(self):
+        payload = b'{"temp": 28.3, "device": "ESP32"}'
+        parsed, value = extract_payload_and_value(payload, "json", None)
+        self.assertEqual(value, 28.3)
+        self.assertEqual(parsed["temp"], 28.3)
+
+    def test_extract_string_number_under_json_format(self):
+        payload = b"18.9"
+        parsed, value = extract_payload_and_value(payload, "json", None)
+        self.assertEqual(value, 18.9)
+
 
 if __name__ == "__main__":
     unittest.main()

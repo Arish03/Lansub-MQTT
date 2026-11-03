@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { useAppStore, topicMatches } from "@/lib/store";
 import { api } from "@/lib/api";
-import { TrendingUp, RefreshCw, Download } from "lucide-react";
+import { TrendingUp, RefreshCw, Download, Pencil, Trash2 } from "lucide-react";
 
 interface LineChartProps {
   key?: any;
@@ -11,9 +11,11 @@ interface LineChartProps {
   topicId?: string;
   topic: string;
   unit?: string;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }
 
-export function LineChart({ title, topicId, topic, unit = "" }: LineChartProps) {
+export function LineChart({ title, topicId, topic, unit = "", onEdit, onDelete }: LineChartProps) {
   const [range, setRange] = useState<"1h" | "24h" | "7d">("1h");
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -40,6 +42,28 @@ export function LineChart({ title, topicId, topic, unit = "" }: LineChartProps) 
   });
   const seedHistory = useAppStore((state: any) => state.seedHistory);
 
+  // Helper to extract a number from message or payload
+  const parseNumValue = (val: any, payload: any): number | null => {
+    if (val !== null && val !== undefined && !isNaN(Number(val))) {
+      return Number(val);
+    }
+    if (typeof payload === "number") return payload;
+    if (typeof payload === "object" && payload !== null) {
+      let p = payload;
+      if (typeof p.raw === "string") {
+        try {
+          p = JSON.parse(p.raw);
+        } catch {}
+      }
+      if (typeof p === "object" && p !== null) {
+        const v = p.value ?? p.temp ?? p.temperature ?? p.reading ?? p.val ?? p.data ?? p.metric;
+        if (typeof v === "number") return v;
+        if (typeof v === "string" && !isNaN(Number(v))) return Number(v);
+      }
+    }
+    return null;
+  };
+
   // Load historical points when topicId is provided
   useEffect(() => {
     if (!topicId) return;
@@ -47,8 +71,11 @@ export function LineChart({ title, topicId, topic, unit = "" }: LineChartProps) 
     api.getTopicHistory(topicId, range, 200)
       .then((messages: any[]) => {
         const points = messages
-          .filter((m: any) => m.value !== null && m.value !== undefined)
-          .map((m: any) => ({ ts: m.ts, value: Number(m.value) }));
+          .map((m: any) => {
+            const v = parseNumValue(m.value, m.payload);
+            return v !== null ? { ts: m.ts, value: v } : null;
+          })
+          .filter((p: any): p is { ts: string; value: number } => p !== null);
         seedHistory(topic, points);
       })
       .catch((err: any) => console.error("Failed to load topic history:", err))
@@ -58,8 +85,11 @@ export function LineChart({ title, topicId, topic, unit = "" }: LineChartProps) 
   const data = useMemo(() => {
     const rawBuffer = topicState?.ringBuffer || [];
     return rawBuffer
-      .filter((p: any) => p.value !== null && p.value !== undefined && !isNaN(p.value))
-      .map((p: any) => ({ value: p.value as number, ts: p.ts }));
+      .map((p: any) => {
+        const v = parseNumValue(p.value, p.payload);
+        return v !== null ? { value: v, ts: p.ts } : null;
+      })
+      .filter((p: any): p is { value: number; ts: string } => p !== null);
   }, [topicState?.ringBuffer]);
 
   // Compute SVG dimensions and path
@@ -102,7 +132,7 @@ export function LineChart({ title, topicId, topic, unit = "" }: LineChartProps) 
   }, [data]);
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm col-span-2 flex flex-col justify-between">
+    <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm col-span-1 md:col-span-2 flex flex-col justify-between group">
       <div className="flex items-center justify-between mb-2">
         <div>
           <div className="flex items-center gap-2">
@@ -140,6 +170,37 @@ export function LineChart({ title, topicId, topic, unit = "" }: LineChartProps) 
               <Download className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">{exporting ? "..." : "CSV"}</span>
             </button>
+          )}
+
+          {(onEdit || onDelete) && (
+            <div className="flex items-center gap-0.5 opacity-80 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity bg-slate-100 p-0.5 rounded-lg">
+              {onEdit && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit();
+                  }}
+                  className="p-1 rounded text-slate-500 hover:text-blue-600 hover:bg-white transition-colors"
+                  title="Edit Widget"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+              )}
+              {onDelete && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete();
+                  }}
+                  className="p-1 rounded text-slate-500 hover:text-rose-600 hover:bg-white transition-colors"
+                  title="Delete Widget"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
           )}
         </div>
       </div>

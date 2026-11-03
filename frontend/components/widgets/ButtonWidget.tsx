@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { api } from "@/lib/api";
-import { Play, CheckCircle2, AlertCircle, Loader2, Zap } from "lucide-react";
+import { Play, CheckCircle2, AlertCircle, Loader2, Zap, Pencil, Trash2 } from "lucide-react";
 
 interface ButtonWidgetProps {
   key?: any;
@@ -12,6 +12,8 @@ interface ButtonWidgetProps {
   payload?: any;
   buttonLabel?: string;
   variant?: "primary" | "danger" | "emerald";
+  onEdit?: () => void;
+  onDelete?: () => void;
 }
 
 export function ButtonWidget({
@@ -21,6 +23,8 @@ export function ButtonWidget({
   payload = "TRIGGER",
   buttonLabel = "Dispatch Action",
   variant = "primary",
+  onEdit,
+  onDelete,
 }: ButtonWidgetProps) {
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ text: string; error?: boolean } | null>(null);
@@ -73,14 +77,46 @@ export function ButtonWidget({
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:border-slate-300 transition-all flex flex-col justify-between">
+    <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:border-slate-300 transition-all flex flex-col justify-between group">
       {/* Header */}
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
           {title}
         </span>
-        <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-          <Zap className="w-3.5 h-3.5" />
+        <div className="flex items-center gap-1.5">
+          {(onEdit || onDelete) && (
+            <div className="flex items-center gap-0.5 opacity-80 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity bg-slate-100 rounded-lg p-0.5">
+              {onEdit && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit();
+                  }}
+                  className="p-1 rounded text-slate-500 hover:text-blue-600 hover:bg-white transition-colors"
+                  title="Edit Widget"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+              )}
+              {onDelete && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete();
+                  }}
+                  className="p-1 rounded text-slate-500 hover:text-rose-600 hover:bg-white transition-colors"
+                  title="Delete Widget"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          )}
+          <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+            <Zap className="w-3.5 h-3.5" />
+          </div>
         </div>
       </div>
 

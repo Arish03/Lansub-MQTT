@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useAppStore, topicMatches } from "@/lib/store";
-import { Gauge, AlertTriangle } from "lucide-react";
+import { Gauge, AlertTriangle, Pencil, Trash2 } from "lucide-react";
 
 interface GaugeWidgetProps {
   key?: any;
@@ -13,6 +13,8 @@ interface GaugeWidgetProps {
   max?: number;
   warningThreshold?: number;
   dangerThreshold?: number;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }
 
 export function GaugeWidget({
@@ -23,6 +25,8 @@ export function GaugeWidget({
   max = 100,
   warningThreshold,
   dangerThreshold,
+  onEdit,
+  onDelete,
 }: GaugeWidgetProps) {
   const topicState = useAppStore((state: any) => {
     if (state.topicData[topic]) return state.topicData[topic];
@@ -34,8 +38,30 @@ export function GaugeWidget({
     return null;
   });
 
-  const rawValue = topicState?.latestValue;
-  const hasValue = rawValue !== null && rawValue !== undefined && !isNaN(Number(rawValue));
+  const rawValue = useMemo(() => {
+    if (topicState?.latestValue !== null && topicState?.latestValue !== undefined && !isNaN(Number(topicState.latestValue))) {
+      return Number(topicState.latestValue);
+    }
+    const p = topicState?.latestPayload;
+    if (p !== null && p !== undefined) {
+      if (typeof p === "number") return p;
+      let parsed = p;
+      if (typeof p?.raw === "string") {
+        try {
+          parsed = JSON.parse(p.raw);
+        } catch {}
+      }
+      if (typeof parsed === "object" && parsed !== null) {
+        const val = parsed.value ?? parsed.temp ?? parsed.temperature ?? parsed.reading ?? parsed.val ?? parsed.data;
+        if (val !== null && val !== undefined && !isNaN(Number(val))) {
+          return Number(val);
+        }
+      }
+    }
+    return null;
+  }, [topicState]);
+
+  const hasValue = rawValue !== null && rawValue !== undefined;
   const currentVal = hasValue ? Number(rawValue) : min;
 
   // Compute percentage clamped between 0 and 1
@@ -94,7 +120,7 @@ export function GaugeWidget({
     : "#2563eb";
 
   return (
-    <div className={`bg-white border rounded-xl p-5 shadow-sm transition-all flex flex-col justify-between ${
+    <div className={`bg-white border rounded-xl p-5 shadow-sm transition-all flex flex-col justify-between group ${
       isDanger
         ? "border-rose-300 ring-2 ring-rose-100"
         : isWarning
@@ -111,7 +137,39 @@ export function GaugeWidget({
             <AlertTriangle className={`w-3.5 h-3.5 ${isDanger ? "text-rose-500 animate-bounce" : "text-amber-500"}`} />
           )}
         </div>
-        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+        <div className="flex items-center gap-1.5">
+          {(onEdit || onDelete) && (
+            <div className="flex items-center gap-0.5 opacity-80 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity bg-slate-100 rounded-lg p-0.5">
+              {onEdit && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit();
+                  }}
+                  className="p-1 rounded text-slate-500 hover:text-blue-600 hover:bg-white transition-colors"
+                  title="Edit Widget"
+                >
+                  <Pencil className="w-3 h-3" />
+                </button>
+              )}
+              {onDelete && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete();
+                  }}
+                  className="p-1 rounded text-slate-500 hover:text-rose-600 hover:bg-white transition-colors"
+                  title="Delete Widget"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          )}
+          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+        </div>
       </div>
 
       {/* SVG Radial Gauge */}

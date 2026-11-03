@@ -27,55 +27,114 @@ def extract_payload_and_value(
     """
     Extracts structured payload and numeric metric from raw packet bytes.
     Pure synchronous function supporting JSON, JSONPath, numeric, and text.
+    Handles auto-detection and graceful fallback for JSON payloads configured as numbers,
+    numbers configured as JSON, or JSON without explicit value_path.
     """
     raw_str = ""
     try:
         raw_str = payload_raw.decode("utf-8", errors="replace").strip()
     except Exception:
-        raw_str = str(payload_raw)
+        raw_str = str(payload_raw).strip()
 
     payload_obj: Any = None
     extracted_value: Optional[float] = None
 
-    if payload_format == "json":
+    # Step 1: Attempt JSON parsing first if possible or indicated
+    is_json = False
+    parsed_json = None
+    if raw_str.startswith("{") or raw_str.startswith("[") or payload_format == "json":
         try:
-            payload_obj = json.loads(raw_str)
-            if value_path and isinstance(payload_obj, dict):
-                if parse is not None:
+            parsed_json = json.loads(raw_str)
+            is_json = True
+            payload_obj = parsed_json
+        except Exception:
+            is_json = False
+
+    # If raw_str was wrapped in quotes (e.g. double encoded JSON string), unwrap once
+    if is_json and isinstance(parsed_json, str):
+        trimmed = parsed_json.strip()
+        if trimmed.startswith("{") and trimmed.endswith("}"):
+            try:
+                parsed_json = json.loads(trimmed)
+                payload_obj = parsed_json
+            except Exception:
+                pass
+
+    # Step 2: Handle JSON payload extraction
+    if is_json and isinstance(payload_obj, dict):
+        if value_path:
+            if parse is not None:
+                try:
+                    expr = parse(value_path)
+                    matches = expr.find(payload_obj)
+                    if matches:
+                        extracted_value = float(matches[0].value)
+                except Exception:
+                    pass
+            else:
+                clean_path = value_path.lstrip("$.").strip()
+                parts = clean_path.split(".")
+                curr = payload_obj
+                for p in parts:
+                    if isinstance(curr, dict) and p in curr:
+                        curr = curr[p]
+                    else:
+                        curr = None
+                        break
+                if curr is not None:
                     try:
-                        expr = parse(value_path)
-                        matches = expr.find(payload_obj)
-                        if matches:
-                            extracted_value = float(matches[0].value)
+                        extracted_value = float(curr)
                     except Exception:
                         pass
-                else:
-                    clean_path = value_path.lstrip("$.").strip()
-                    parts = clean_path.split(".")
-                    curr = payload_obj
-                    for p in parts:
-                        if isinstance(curr, dict) and p in curr:
-                            curr = curr[p]
-                        else:
-                            curr = None
-                            break
-                    if curr is not None:
-                        try:
-                            extracted_value = float(curr)
-                        except Exception:
-                            pass
-            elif isinstance(payload_obj, (int, float)):
-                extracted_value = float(payload_obj)
-        except Exception:
-            payload_obj = {"raw": raw_str}
-    elif payload_format == "number":
+
+        # Smart fallback if value_path didn't match or wasn't provided:
+        # Check standard sensor telemetry keys
+        if extracted_value is None:
+            common_keys = (
+                "value", "temp", "temperature", "reading", "val", "data", "metric",
+                "humidity", "pressure", "current", "voltage", "power", "level", "speed"
+            )
+            for k in common_keys:
+                if k in payload_obj:
+                    try:
+                        extracted_value = float(payload_obj[k])
+                        break
+                    except (ValueError, TypeError):
+                        pass
+
+        # If still None, look for the first numeric value in the dictionary
+        if extracted_value is None:
+            for v in payload_obj.values():
+                if isinstance(v, (int, float)) and not isinstance(v, bool):
+                    extracted_value = float(v)
+                    break
+                elif isinstance(v, str):
+                    try:
+                        extracted_value = float(v)
+                        break
+                    except ValueError:
+                        pass
+
+    elif is_json and isinstance(payload_obj, (int, float)) and not isinstance(payload_obj, bool):
+        extracted_value = float(payload_obj)
+
+    # Step 3: Handle raw numeric format or fallback when not valid JSON
+    if extracted_value is None:
         try:
             extracted_value = float(raw_str)
-            payload_obj = extracted_value
-        except Exception:
+            if payload_obj is None:
+                payload_obj = extracted_value
+        except (ValueError, TypeError):
+            pass
+
+    # Step 4: Finalize payload_obj
+    if payload_obj is None:
+        if payload_format == "number":
             payload_obj = {"raw": raw_str}
-    else:  # text
-        payload_obj = {"text": raw_str}
+        elif payload_format == "text":
+            payload_obj = {"text": raw_str}
+        else:
+            payload_obj = {"raw": raw_str}
 
     final_payload = payload_obj if isinstance(payload_obj, (dict, list)) else {"value": payload_obj}
     return final_payload, extracted_value

@@ -11,7 +11,7 @@ import { GaugeWidget } from "@/components/widgets/GaugeWidget";
 import { ButtonWidget } from "@/components/widgets/ButtonWidget";
 import { api } from "@/lib/api";
 import { wsClient } from "@/lib/ws-client";
-import { Plus, LayoutGrid, Radio, Loader2, Sparkles, Zap, Play, Square, CheckCircle } from "lucide-react";
+import { Plus, LayoutGrid, Radio, Loader2, Sparkles, Zap, Play, Square, CheckCircle, Pencil, Trash2 } from "lucide-react";
 
 export default function DashboardPage() {
   const [dashboard, setDashboard] = useState<any>(null);
@@ -19,6 +19,8 @@ export default function DashboardPage() {
   const [brokers, setBrokers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingWidget, setEditingWidget] = useState<any>(null);
 
   // Quick test & simulation state
   const [sendingTest, setSendingTest] = useState(false);
@@ -187,6 +189,109 @@ export default function DashboardPage() {
     }
   };
 
+  const handleOpenEdit = (w: any) => {
+    setEditingWidget(w);
+    setWidgetType(w.type || "stat");
+    setWidgetTitle(w.config?.title || "");
+    if (w.topic_id) {
+      setSelectedTopicId(w.topic_id);
+    } else if (topics.length > 0) {
+      setSelectedTopicId(topics[0].id);
+    }
+    if (w.config?.broker_id) {
+      setSelectedBrokerId(w.config.broker_id);
+    } else if (brokers.length > 0) {
+      setSelectedBrokerId(brokers[0].id);
+    }
+    setSwitchTopic(w.config?.topic || "");
+    setGaugeMin(w.config?.min !== undefined ? Number(w.config.min) : 0);
+    setGaugeMax(w.config?.max !== undefined ? Number(w.config.max) : 100);
+    setGaugeUnit(w.config?.unit || "");
+    setButtonLabel(w.config?.buttonLabel || "Dispatch Action");
+    setButtonPayload(
+      typeof w.config?.payload === "object"
+        ? JSON.stringify(w.config.payload)
+        : w.config?.payload || "TRIGGER"
+    );
+    setButtonVariant(w.config?.variant || "primary");
+    setShowEditModal(true);
+  };
+
+  const handleUpdateWidget = async (e: any) => {
+    e.preventDefault();
+    if (!editingWidget) return;
+    setSavingWidget(true);
+
+    let config: any = { ...editingWidget.config };
+    let topicId: string | null = selectedTopicId;
+
+    if (widgetType === "switch") {
+      topicId = null;
+      config = {
+        title: widgetTitle || "Relay Switch",
+        broker_id: selectedBrokerId,
+        topic: switchTopic || "control/relay1",
+      };
+    } else if (widgetType === "button") {
+      topicId = null;
+      config = {
+        title: widgetTitle || "Action Button",
+        broker_id: selectedBrokerId,
+        topic: switchTopic || "control/actions",
+        payload: buttonPayload,
+        buttonLabel: buttonLabel || "Dispatch Action",
+        variant: buttonVariant,
+      };
+    } else if (widgetType === "gauge") {
+      const chosenTopic = topics.find((t: any) => t.id === selectedTopicId);
+      config = {
+        title: widgetTitle || (chosenTopic ? chosenTopic.label || chosenTopic.pattern : "Metric Gauge"),
+        topic: chosenTopic ? chosenTopic.pattern : (config.topic || "unknown"),
+        unit: gaugeUnit || (chosenTopic ? chosenTopic.unit : ""),
+        min: Number(gaugeMin),
+        max: Number(gaugeMax),
+      };
+    } else {
+      const chosenTopic = topics.find((t: any) => t.id === selectedTopicId);
+      config = {
+        title: widgetTitle || (chosenTopic ? chosenTopic.label || chosenTopic.pattern : "Metric"),
+        topic: chosenTopic ? chosenTopic.pattern : (config.topic || "unknown"),
+        unit: gaugeUnit || (chosenTopic ? chosenTopic.unit : ""),
+      };
+    }
+
+    try {
+      await api.updateWidget(editingWidget.id, {
+        type: widgetType,
+        topic_id: topicId,
+        config,
+      });
+      setShowEditModal(false);
+      setEditingWidget(null);
+      await loadAll();
+    } catch (err: any) {
+      alert(err.message || "Failed to update widget");
+    } finally {
+      setSavingWidget(false);
+    }
+  };
+
+  const handleDeleteWidget = async (widgetId: string) => {
+    if (!confirm("Are you sure you want to remove this widget from your dashboard?")) {
+      return;
+    }
+    try {
+      await api.deleteWidget(widgetId);
+      if (showEditModal) {
+        setShowEditModal(false);
+        setEditingWidget(null);
+      }
+      await loadAll();
+    } catch (err: any) {
+      alert(err.message || "Failed to delete widget");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex">
       <Sidebar />
@@ -267,6 +372,8 @@ export default function DashboardPage() {
                         title={w.config?.title || topic?.label || "Metric"}
                         topic={w.config?.topic || topic?.pattern || ""}
                         unit={w.config?.unit || topic?.unit || ""}
+                        onEdit={() => handleOpenEdit(w)}
+                        onDelete={() => handleDeleteWidget(w.id)}
                       />
                     );
                   }
@@ -279,6 +386,8 @@ export default function DashboardPage() {
                         topicId={w.topic_id}
                         topic={w.config?.topic || topic?.pattern || ""}
                         unit={w.config?.unit || topic?.unit || ""}
+                        onEdit={() => handleOpenEdit(w)}
+                        onDelete={() => handleDeleteWidget(w.id)}
                       />
                     );
                   }
@@ -294,6 +403,8 @@ export default function DashboardPage() {
                         max={w.config?.max !== undefined ? Number(w.config.max) : 100}
                         warningThreshold={w.config?.warningThreshold}
                         dangerThreshold={w.config?.dangerThreshold}
+                        onEdit={() => handleOpenEdit(w)}
+                        onDelete={() => handleDeleteWidget(w.id)}
                       />
                     );
                   }
@@ -307,6 +418,8 @@ export default function DashboardPage() {
                         payload={w.config?.payload || "TRIGGER"}
                         buttonLabel={w.config?.buttonLabel || "Dispatch"}
                         variant={w.config?.variant || "primary"}
+                        onEdit={() => handleOpenEdit(w)}
+                        onDelete={() => handleDeleteWidget(w.id)}
                       />
                     );
                   }
@@ -317,6 +430,8 @@ export default function DashboardPage() {
                         title={w.config?.title || "Relay Control"}
                         brokerId={w.config?.broker_id || selectedBrokerId}
                         topic={w.config?.topic || "cmd/switch"}
+                        onEdit={() => handleOpenEdit(w)}
+                        onDelete={() => handleDeleteWidget(w.id)}
                       />
                     );
                   }
@@ -572,6 +687,231 @@ export default function DashboardPage() {
                     >
                       {savingWidget ? "Adding..." : "Add to Dashboard"}
                     </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Edit Widget Modal */}
+          {showEditModal && editingWidget && (
+            <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900">Edit Dashboard Widget</h2>
+                    <p className="text-xs text-slate-500 mt-0.5">Modify telemetry topic, bounds, or control settings.</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowEditModal(false);
+                      setEditingWidget(null);
+                    }}
+                    className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <form onSubmit={handleUpdateWidget} className="mt-5 space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Widget Type</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { type: "stat", label: "Stat Card" },
+                        { type: "line", label: "Line Chart" },
+                        { type: "gauge", label: "Gauge Dial" },
+                        { type: "switch", label: "Switch (Relay)" },
+                        { type: "button", label: "Button (Action)" },
+                      ].map((item) => (
+                        <button
+                          key={item.type}
+                          type="button"
+                          onClick={() => setWidgetType(item.type as any)}
+                          className={`py-2 px-2 text-xs font-medium rounded-xl border transition-colors ${
+                            widgetType === item.type
+                              ? "bg-blue-50 border-blue-600 text-blue-700 font-semibold"
+                              : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                          }`}
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Widget Title</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Tank Pressure or Emergency Stop"
+                      value={widgetTitle}
+                      onChange={(e: any) => setWidgetTitle(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+                    />
+                  </div>
+
+                  {/* Telemetry topic selection for stat, line, gauge */}
+                  {["stat", "line", "gauge"].includes(widgetType) && (
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Data Topic</label>
+                      {topics.length === 0 ? (
+                        <p className="text-xs text-rose-500">No topics available.</p>
+                      ) : (
+                        <select
+                          value={selectedTopicId}
+                          onChange={(e: any) => setSelectedTopicId(e.target.value)}
+                          className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white"
+                        >
+                          {topics.map((t: any) => (
+                            <option key={t.id} value={t.id}>
+                              {t.pattern} {t.label ? `(${t.label})` : ""}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Gauge Specific Bounds */}
+                  {widgetType === "gauge" && (
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Min Value</label>
+                        <input
+                          type="number"
+                          value={gaugeMin}
+                          onChange={(e: any) => setGaugeMin(Number(e.target.value))}
+                          className="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Max Value</label>
+                        <input
+                          type="number"
+                          value={gaugeMax}
+                          onChange={(e: any) => setGaugeMax(Number(e.target.value))}
+                          className="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Unit</label>
+                        <input
+                          type="text"
+                          value={gaugeUnit}
+                          onChange={(e: any) => setGaugeUnit(e.target.value)}
+                          placeholder="e.g. °C, bar"
+                          className="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-xs"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Publish controls for switch and button */}
+                  {["switch", "button"].includes(widgetType) && (
+                    <>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Target Broker</label>
+                        <select
+                          value={selectedBrokerId}
+                          onChange={(e: any) => setSelectedBrokerId(e.target.value)}
+                          className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white"
+                        >
+                          {brokers.map((b: any) => (
+                            <option key={b.id} value={b.id}>
+                              {b.name} ({b.host})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Publish Topic</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. control/relay1 or control/reboot"
+                          value={switchTopic}
+                          onChange={(e: any) => setSwitchTopic(e.target.value)}
+                          className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-600"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {/* Button Specific Configs */}
+                  {widgetType === "button" && (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Button Label</label>
+                        <input
+                          type="text"
+                          value={buttonLabel}
+                          onChange={(e: any) => setButtonLabel(e.target.value)}
+                          placeholder="e.g. Reboot Machine"
+                          className="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Payload (JSON or string)</label>
+                        <input
+                          type="text"
+                          value={buttonPayload}
+                          onChange={(e: any) => setButtonPayload(e.target.value)}
+                          placeholder='e.g. {"cmd": "restart"}'
+                          className="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-xs font-mono"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Style Variant</label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {(["primary", "danger", "emerald"] as const).map((v) => (
+                            <button
+                              key={v}
+                              type="button"
+                              onClick={() => setButtonVariant(v)}
+                              className={`py-1.5 px-2 text-xs rounded-lg border capitalize font-medium ${
+                                buttonVariant === v
+                                  ? "bg-slate-900 text-white border-slate-900"
+                                  : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                              }`}
+                            >
+                              {v}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="pt-4 flex items-center justify-between border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteWidget(editingWidget.id)}
+                      className="flex items-center gap-1.5 px-3 py-2 text-rose-600 hover:bg-rose-50 rounded-xl text-xs font-semibold transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Delete
+                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowEditModal(false);
+                          setEditingWidget(null);
+                        }}
+                        className="px-4 py-2 border border-slate-200 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={savingWidget}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 shadow-sm"
+                      >
+                        {savingWidget ? "Saving..." : "Save Changes"}
+                      </button>
+                    </div>
                   </div>
                 </form>
               </div>
