@@ -42,26 +42,33 @@ export function LineChart({ title, topicId, topic, unit = "", onEdit, onDelete }
   });
   const seedHistory = useAppStore((state: any) => state.seedHistory);
 
-  // Helper to extract a number from message or payload
+  // Helper to extract a number from message or payload - handles double-encoded raw payloads
   const parseNumValue = (val: any, payload: any): number | null => {
-    if (val !== null && val !== undefined && !isNaN(Number(val))) {
-      return Number(val);
-    }
-    if (typeof payload === "number") return payload;
-    if (typeof payload === "object" && payload !== null) {
-      let p = payload;
-      if (typeof p.raw === "string") {
-        try {
-          p = JSON.parse(p.raw);
-        } catch {}
+    function deepExtract(raw: any): number | null {
+      if (raw === null || raw === undefined) return null;
+      if (typeof raw === "number" && !isNaN(raw)) return raw;
+      if (typeof raw === "string") {
+        const n = Number(raw);
+        if (!isNaN(n)) return n;
+        try { return deepExtract(JSON.parse(raw)); } catch { return null; }
       }
-      if (typeof p === "object" && p !== null) {
-        const v = p.value ?? p.temp ?? p.temperature ?? p.reading ?? p.val ?? p.data ?? p.metric;
-        if (typeof v === "number") return v;
-        if (typeof v === "string" && !isNaN(Number(v))) return Number(v);
+      if (typeof raw === "object") {
+        if ("raw" in raw) { const r = deepExtract(raw.raw); if (r !== null) return r; }
+        for (const k of ["value", "temp", "temperature", "reading", "val", "data", "metric", "humidity", "pressure", "current", "voltage", "level", "speed"]) {
+          if (k in raw && raw[k] !== null && raw[k] !== undefined) {
+            const v = typeof raw[k] === "number" ? raw[k] : Number(raw[k]);
+            if (!isNaN(v)) return v;
+          }
+        }
+        for (const v of Object.values(raw as Record<string, any>)) {
+          if (typeof v === "number" && !isNaN(v)) return v;
+          if (typeof v === "string" && !isNaN(Number(v))) return Number(v);
+        }
       }
+      return null;
     }
-    return null;
+    if (val !== null && val !== undefined && !isNaN(Number(val))) return Number(val);
+    return deepExtract(payload);
   };
 
   // Load historical points when topicId is provided

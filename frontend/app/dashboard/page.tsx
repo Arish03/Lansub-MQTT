@@ -438,52 +438,24 @@ export default function DashboardPage() {
                   return null;
                 })}
 
-                {/* Dynamic widgets when dashboard has no custom saved widgets */}
+                {/* Empty state when no saved widgets */}
                 {(!dashboard?.widgets || dashboard.widgets.length === 0) && (
-                  <>
-                    {topics.length > 0 ? (
-                      <>
-                        {topics.map((t: any) => (
-                          <StatCard
-                            key={`stat-${t.id}`}
-                            title={t.label || t.pattern}
-                            topic={t.pattern}
-                            unit={t.unit || ""}
-                          />
-                        ))}
-                        <SwitchWidget
-                          title="Relay Control"
-                          brokerId={brokers[0]?.id || ""}
-                          topic="control/relay1"
-                        />
-                        <LineChart
-                          key={`line-${topics[0].id}`}
-                          title={`${topics[0].label || topics[0].pattern} (Live)`}
-                          topicId={topics[0].id}
-                          topic={topics[0].pattern}
-                          unit={topics[0].unit || ""}
-                        />
-                      </>
-                    ) : (
-                      <>
-                        <StatCard
-                          title="Sample Telemetry"
-                          topic="sensor/temperature"
-                          unit="°C"
-                        />
-                        <SwitchWidget
-                          title="Relay Switch 1"
-                          brokerId={brokers[0]?.id || ""}
-                          topic="control/relay1"
-                        />
-                        <LineChart
-                          title="Temperature Trend"
-                          topic="sensor/temperature"
-                          unit="°C"
-                        />
-                      </>
-                    )}
-                  </>
+                  <div className="col-span-full flex flex-col items-center justify-center py-20 text-center">
+                    <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center mb-4">
+                      <LayoutGrid className="w-8 h-8 text-blue-400" />
+                    </div>
+                    <h3 className="text-base font-semibold text-slate-800 mb-1">No widgets yet</h3>
+                    <p className="text-sm text-slate-500 max-w-xs mb-5">
+                      Add your first widget to start monitoring live telemetry, gauges, switches, and more.
+                    </p>
+                    <button
+                      onClick={() => setShowAddModal(true)}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-sm"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add First Widget
+                    </button>
+                  </div>
                 )}
               </div>
 

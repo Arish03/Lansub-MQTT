@@ -81,24 +81,34 @@ export const useAppStore = create<AppStore>((set) => ({
 
   addMessage: (msg) =>
     set((state) => {
-      // Auto-extract numeric metric value if not directly set
-      let resolvedValue = msg.value;
-      if (resolvedValue === null || resolvedValue === undefined) {
-        if (typeof msg.payload === "number") {
-          resolvedValue = msg.payload;
-        } else if (typeof msg.payload === "object" && msg.payload !== null) {
-          let p = msg.payload;
-          if (typeof p.raw === "string") {
-            try {
-              p = JSON.parse(p.raw);
-            } catch {}
+      // Auto-extract numeric metric value - handles nested/double-encoded raw payloads
+      function deepExtract(raw: any): number | null {
+        if (raw === null || raw === undefined) return null;
+        if (typeof raw === "number" && !isNaN(raw)) return raw;
+        if (typeof raw === "string") {
+          const n = Number(raw);
+          if (!isNaN(n)) return n;
+          try { return deepExtract(JSON.parse(raw)); } catch { return null; }
+        }
+        if (typeof raw === "object") {
+          if ("raw" in raw) { const r = deepExtract(raw.raw); if (r !== null) return r; }
+          for (const k of ["value", "temp", "temperature", "reading", "val", "data", "metric", "humidity", "pressure", "current", "voltage", "level", "speed"]) {
+            if (k in raw && raw[k] !== null && raw[k] !== undefined) {
+              const v = typeof raw[k] === "number" ? raw[k] : Number(raw[k]);
+              if (!isNaN(v)) return v;
+            }
           }
-          if (typeof p === "object" && p !== null) {
-            const v = p.value ?? p.temp ?? p.temperature ?? p.reading ?? p.val ?? p.data ?? p.metric;
-            if (typeof v === "number") resolvedValue = v;
-            else if (typeof v === "string" && !isNaN(Number(v))) resolvedValue = Number(v);
+          for (const v of Object.values(raw as Record<string, any>)) {
+            if (typeof v === "number" && !isNaN(v)) return v;
+            if (typeof v === "string" && !isNaN(Number(v))) return Number(v);
           }
         }
+        return null;
+      }
+
+      let resolvedValue = msg.value;
+      if (resolvedValue === null || resolvedValue === undefined) {
+        resolvedValue = deepExtract(msg.payload);
       }
 
       const enrichedMsg = { ...msg, value: resolvedValue !== undefined ? resolvedValue : null };

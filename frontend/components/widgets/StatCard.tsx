@@ -24,34 +24,56 @@ export function StatCard({ title, topic, unit = "", onEdit, onDelete }: StatCard
   });
 
   let displayValue: any = "--";
-  if (topicState?.latestValue !== null && topicState?.latestValue !== undefined) {
-    displayValue = topicState.latestValue;
-  } else if (topicState?.latestPayload !== undefined && topicState?.latestPayload !== null) {
-    const p = topicState.latestPayload;
-    if (typeof p === "number" || typeof p === "string") {
-      displayValue = p;
-    } else if (typeof p === "object") {
-      let parsed = p;
-      if (typeof p.raw === "string") {
-        try {
-          parsed = JSON.parse(p.raw);
-        } catch {
-          parsed = p.raw;
+
+  // Helper: deeply extract numeric metric from any payload shape
+  function extractMetric(raw: any): any {
+    if (raw === null || raw === undefined) return undefined;
+    if (typeof raw === "number") return raw;
+    if (typeof raw === "string") {
+      // Try numeric string first
+      const num = Number(raw);
+      if (!isNaN(num)) return num;
+      // Try parsing as JSON
+      try {
+        return extractMetric(JSON.parse(raw));
+      } catch {
+        return undefined;
+      }
+    }
+    if (typeof raw === "object") {
+      // Unwrap double-encoded raw field
+      if ("raw" in raw) {
+        const inner = extractMetric(raw.raw);
+        if (inner !== undefined) return inner;
+      }
+      // Check common telemetry keys
+      for (const k of ["value", "temp", "temperature", "reading", "val", "data", "metric", "humidity", "pressure", "current", "voltage", "level", "speed"]) {
+        if (k in raw && raw[k] !== undefined && raw[k] !== null) {
+          const v = typeof raw[k] === "number" ? raw[k] : Number(raw[k]);
+          if (!isNaN(v)) return v;
         }
       }
-      if (typeof parsed === "object" && parsed !== null) {
-        displayValue =
-          parsed.value ??
-          parsed.temp ??
-          parsed.temperature ??
-          parsed.reading ??
-          parsed.val ??
-          parsed.data ??
-          parsed.metric ??
-          (p.raw ? p.raw : JSON.stringify(p));
-      } else {
-        displayValue = parsed;
+      // First numeric value in object
+      for (const v of Object.values(raw as Record<string, any>)) {
+        if (typeof v === "number" && !isNaN(v)) return v;
+        if (typeof v === "string" && !isNaN(Number(v))) return Number(v);
       }
+    }
+    return undefined;
+  }
+
+  if (topicState?.latestValue !== null && topicState?.latestValue !== undefined && !isNaN(Number(topicState.latestValue))) {
+    displayValue = topicState.latestValue;
+  } else if (topicState?.latestPayload !== undefined && topicState?.latestPayload !== null) {
+    const extracted = extractMetric(topicState.latestPayload);
+    if (extracted !== undefined) {
+      displayValue = extracted;
+    } else {
+      // Last resort: show raw string if it's short, otherwise "--"
+      const p = topicState.latestPayload;
+      if (typeof p === "string" && p.length < 60) displayValue = p;
+      else if (typeof p === "object" && p !== null && "raw" in p && typeof p.raw === "string" && p.raw.length < 60) displayValue = p.raw;
+      else displayValue = "--";
     }
   }
 

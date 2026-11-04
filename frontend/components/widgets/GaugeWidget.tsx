@@ -43,22 +43,34 @@ export function GaugeWidget({
       return Number(topicState.latestValue);
     }
     const p = topicState?.latestPayload;
-    if (p !== null && p !== undefined) {
-      if (typeof p === "number") return p;
-      let parsed = p;
-      if (typeof p?.raw === "string") {
-        try {
-          parsed = JSON.parse(p.raw);
-        } catch {}
+    if (p === null || p === undefined) return null;
+
+    // Recursive deep extractor handling double-encoded raw payloads
+    function deepExtract(raw: any): number | null {
+      if (raw === null || raw === undefined) return null;
+      if (typeof raw === "number" && !isNaN(raw)) return raw;
+      if (typeof raw === "string") {
+        const n = Number(raw);
+        if (!isNaN(n)) return n;
+        try { return deepExtract(JSON.parse(raw)); } catch { return null; }
       }
-      if (typeof parsed === "object" && parsed !== null) {
-        const val = parsed.value ?? parsed.temp ?? parsed.temperature ?? parsed.reading ?? parsed.val ?? parsed.data;
-        if (val !== null && val !== undefined && !isNaN(Number(val))) {
-          return Number(val);
+      if (typeof raw === "object") {
+        if ("raw" in raw) { const r = deepExtract(raw.raw); if (r !== null) return r; }
+        for (const k of ["value", "temp", "temperature", "reading", "val", "data", "metric", "humidity", "pressure", "current", "voltage", "level", "speed"]) {
+          if (k in raw && raw[k] !== null && raw[k] !== undefined) {
+            const v = typeof raw[k] === "number" ? raw[k] : Number(raw[k]);
+            if (!isNaN(v)) return v;
+          }
+        }
+        for (const v of Object.values(raw as Record<string, any>)) {
+          if (typeof v === "number" && !isNaN(v)) return v;
+          if (typeof v === "string" && !isNaN(Number(v))) return Number(v);
         }
       }
+      return null;
     }
-    return null;
+
+    return deepExtract(p);
   }, [topicState]);
 
   const hasValue = rawValue !== null && rawValue !== undefined;
