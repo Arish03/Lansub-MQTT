@@ -16,7 +16,7 @@
 - **Multi-Tenant Data Isolation**: Strict user-level data separation powered by Argon2 password hashing, PyJWT tokens, and Fernet encryption for broker credentials at rest.
 - **Dynamic Multi-Broker Engine**: Add or remove brokers (plaintext TCP or TLS/SSL) and modify topic subscriptions on the fly—no backend restarts required.
 - **Sub-Second Streaming**: Push live metrics from broker to browser over WebSockets with $< 50\text{ms}$ typical delivery latency.
-- **Intelligent Payload Extraction**: Ingest and extract metrics from JSON (via JSONPath or dot notation like `$.metrics.temp`), raw numeric floats, or text status strings.
+- **Intelligent Payload Extraction**: Deep recursive extraction from JSON (via JSONPath or dot notation like `$.metrics.temp`), double-encoded raw payloads, raw numeric floats, or text status strings.
 - **Interactive UI Widgets**:
   - **Stat Card**: Real-time value, units, delta trends, and animated alert states.
   - **Radial Gauge Dial**: Smooth 240° SVG arc with safe, warning, and critical danger threshold color zones.
@@ -24,11 +24,12 @@
   - **Relay Switch**: Bi-directional toggle button dispatching `ON`/`OFF` payloads to control relays, lights, or pumps.
   - **Action Button**: One-shot trigger button for operations like *"Reboot Machine"*, *"Trigger Alarm"*, or custom JSON payloads.
   - **Live Message Stream Table**: Real-time packet viewer with Pause/Resume inspection and raw payload viewing.
+- **Widget Management**: Each saved widget has hover-reveal **Edit** (✏️) and **Delete** (🗑️) buttons for in-place reconfiguration without page refresh.
 - **Threshold Alerts & Alarms**: Configurable Min/Max alert boundaries, active alert indicators in the topbar, and visual alarms across cards, gauges, and tables.
 - **One-Click CSV Export**: Stream historical topic telemetry to CSV from line charts or export live buffered packets from the message stream.
 - **Automated Data Retention**: Integrated background worker periodically purging telemetry past each topic's `retain_days`.
 - **Bidirectional IoT Simulator**: Standalone Python script (`scripts/simulator.py`) for simulating multi-sensor telemetry and acknowledging control commands.
-- **Automated Test Suite**: 19 unit and integration tests covering wildcard matching, authentication, ingestion, and schema validation.
+- **Automated Test Suite**: 22 unit and integration tests covering wildcard matching, authentication, ingestion, and schema validation.
 
 ---
 
@@ -42,11 +43,11 @@ flowchart TD
     end
 
     subgraph Brokers ["MQTT Brokers"]
-        Mosquitto["Local Mosquitto (:1883)"]
+        Mosquitto["Local Mosquitto (:7003)"]
         CloudBrokers["EMQX / HiveMQ Cloud (:8883 TLS)"]
     end
 
-    subgraph Backend ["FastAPI Core (:8000)"]
+    subgraph Backend ["FastAPI Core (:7001)"]
         MQTTWorker["aiomqtt Multi-Broker Manager"]
         Ingest["IngestService (Queue + Batch Insert)"]
         Retention["Data Retention Worker (hourly)"]
@@ -55,10 +56,10 @@ flowchart TD
     end
 
     subgraph Storage ["Database"]
-        Postgres[("PostgreSQL 16 (:5432)")]
+        Postgres[("PostgreSQL 16 (:7005)")]
     end
 
-    subgraph Frontend ["Next.js 15 Dashboard (:3000)"]
+    subgraph Frontend ["Next.js 15 Dashboard (:7000)"]
         UIWidgets["Widgets: StatCard, Gauge, LineChart, Switch, Button, Table"]
         UIStore["Zustand Store + Alert Engine"]
     end
@@ -87,45 +88,71 @@ flowchart TD
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (running on Windows, macOS, or Linux)
 - [Git](https://git-scm.com/)
 
-### 2. Launch the Full Stack
-```bash
-# Clone or navigate to the repository
-cd "e:/Lansub MQTT"
+### 2. Clone & Configure
 
-# Start PostgreSQL, Mosquitto, FastAPI, and Next.js
-docker compose up --build -d
+```bash
+git clone https://github.com/Arish03/Lansub-MQTT.git
+cd "Lansub-MQTT"
+
+# Copy the environment template (do NOT commit .env to git)
+cp .env.example .env
 ```
 
-### 3. Access Services
+> **Important:** `.env` is excluded from version control. Edit it to set your own secrets and ports before starting.
+
+### 3. Launch the Full Stack
+```bash
+# Start PostgreSQL, Mosquitto, FastAPI, and Next.js
+docker compose up --build -d
+
+# Verify all services are healthy
+docker compose ps
+```
+
+### 4. Access Services
 
 | Service | URL / Port | Credentials (Default) |
 |---|---|---|
-| **Web Dashboard** | [http://localhost:3000](http://localhost:3000) | `admin@example.com` / `AdminSecurePassword123!` |
-| **API Documentation** | [http://localhost:8000/docs](http://localhost:8000/docs) | Interactive Swagger UI |
-| **MQTT Broker** | `localhost:1883` | Plain TCP (anonymous enabled by default) |
-| **PostgreSQL Database**| `localhost:5432` | User: `app`, Pass: `app_secret`, DB: `mqtt` |
+| **Web Dashboard** | [http://localhost:7000](http://localhost:7000) | `admin@example.com` / `AdminSecurePassword123!` |
+| **API Documentation** | [http://localhost:7001/docs](http://localhost:7001/docs) | Interactive Swagger UI |
+| **MQTT Broker (TCP)** | `localhost:7003` | Plain TCP (anonymous enabled by default) |
+| **MQTT Broker (WS)** | `localhost:7004` | WebSocket transport |
+| **PostgreSQL Database** | `localhost:7005` | User: `app`, Pass: `app_secret`, DB: `mqtt` |
 
-### 4. Customizing Ports (Avoiding VM Port Collisions)
+> **Azure VM / Remote Access:** Replace `localhost` with your VM's public IP or domain. The frontend auto-detects the host at runtime — no rebuild required.
 
-If your host VM already has other applications running on ports `3000`, `8000`, `1883`, or `5432`, modify the host ports in `.env`:
+### 5. Current Port Configuration
+
+The project ships with these default ports (set in `.env` and `docker-compose.yml`):
 
 ```env
-FRONTEND_PORT=3080
-BACKEND_PORT=8080
-MQTT_PORT=18833
-MQTT_WS_PORT=9002
-DB_PORT=5433
-
-# Update clientside endpoints to match your new BACKEND_PORT
-NEXT_PUBLIC_API_URL=http://localhost:8080
-NEXT_PUBLIC_WS_URL=ws://localhost:8080/ws
+FRONTEND_PORT=7000
+BACKEND_PORT=7001
+MQTT_PORT=7003
+MQTT_WS_PORT=7004
+DB_PORT=7005
 ```
 
-Then rebuild and start the stack:
+**To change ports** (e.g. if other services are running on these ports), edit `.env`:
+
+```env
+FRONTEND_PORT=8000
+BACKEND_PORT=8001
+MQTT_PORT=1883
+MQTT_WS_PORT=9001
+DB_PORT=5432
+
+# Update browser-side endpoints to match your new BACKEND_PORT
+NEXT_PUBLIC_API_URL=http://localhost:8001
+NEXT_PUBLIC_WS_URL=ws://localhost:8001/ws
+```
+
+Then rebuild:
 ```bash
 docker compose up -d --build
 ```
-Your dashboard will now run on `http://localhost:3080` and backend API on `http://localhost:8080` without touching other services running on your VM!
+
+> **Note:** Internal container-to-container communication (e.g. backend → mosquitto on port `1883`) is **not** affected by host port changes. Only the host-side mapping changes.
 
 ---
 
@@ -133,8 +160,8 @@ Your dashboard will now run on `http://localhost:3080` and backend API on `http:
 
 The platform includes a bidirectional Python telemetry generator and command subscriber:
 
-```powershell
-python scripts/simulator.py --host localhost --port 1883 --interval 1.0
+```bash
+python scripts/simulator.py --host localhost --port 7003 --interval 1.0
 ```
 
 ### What it does:
@@ -152,14 +179,14 @@ python scripts/simulator.py --host localhost --port 1883 --interval 1.0
 
 The project includes an automated test suite verifying topic matching, security primitives, ingestion logic, and API schemas:
 
-```powershell
+```bash
 python -m unittest discover backend/tests -v
 ```
 
 ### Test Coverage:
 * `backend/tests/test_matcher.py`: Topic wildcard matching (`+`, `#`, exact, edge cases).
 * `backend/tests/test_auth.py`: Password hashing (Argon2), JWT token generation/validation, Fernet credential encryption.
-* `backend/tests/test_ingest.py`: JSONPath parsing, dot-notation fallback extraction, numeric float handling.
+* `backend/tests/test_ingest.py`: JSONPath parsing, dot-notation fallback extraction, numeric float handling, double-encoded raw payload extraction.
 * `backend/tests/test_api_crud.py`: Pydantic schema validation for Auth, Brokers, Topics, Dashboards, and Publish actions.
 
 ---
@@ -170,7 +197,8 @@ python -m unittest discover backend/tests -v
 Lansub MQTT/
 ├── docker-compose.yml         # Container orchestration (db, mosquitto, backend, frontend)
 ├── Makefile                   # Build and development automation targets
-├── .env.example               # Environment variables template
+├── .env                       # Active environment config (NOT committed to git)
+├── .env.example               # Environment variables template (committed to git)
 ├── HOW_TO_USE.md              # In-depth end-user guide & walkthroughs
 ├── ARCHITECTURE.md            # Detailed system design specification
 ├── BUILD.md                   # Build and deployment specifications
@@ -186,7 +214,7 @@ Lansub MQTT/
 │   ├── tests/                 # Automated test suite (matcher, auth, ingest, schemas)
 │   └── app/
 │       ├── main.py            # FastAPI entry point, lifespan, WebSocket router
-│       ├── config.py          # Environment settings
+│       ├── config.py          # Environment settings (CORS, DB, JWT)
 │       ├── db.py              # Async SQLAlchemy engine & session proxy
 │       ├── api/               # REST endpoints (auth, brokers, topics, history, publish)
 │       ├── models/            # SQLAlchemy database models
@@ -202,20 +230,22 @@ Lansub MQTT/
     │   ├── page.tsx           # Home redirect logic
     │   ├── login/page.tsx     # Authentication sign-in
     │   ├── register/page.tsx  # User registration
-    │   ├── dashboard/page.tsx # Real-time widget grid & widget creation modal
+    │   ├── dashboard/page.tsx # Real-time widget grid, add/edit/delete widget modals
     │   └── settings/          # Broker and Topic management screens
     ├── components/
     │   ├── layout/            # Sidebar, Topbar (with alert counter), ConnectionBadge
     │   └── widgets/           # StatCard, GaugeWidget, LineChart, SwitchWidget, ButtonWidget, MessageTable
     └── lib/
-        ├── api.ts             # REST client & CSV export utilities
-        ├── store.ts           # Zustand store with ring buffers & wildcard mapping
+        ├── api.ts             # REST client with auto-detecting VM IP & CSV export utilities
+        ├── store.ts           # Zustand store with ring buffers, deep payload extraction & wildcard mapping
         └── ws-client.ts       # WebSocket client with heartbeat & auto-reconnect
 ```
 
 ---
 
 ## Environment Configuration (`.env`)
+
+> `.env` is **not committed to git**. Use `.env.example` as your starting template.
 
 ```ini
 # PostgreSQL
@@ -234,13 +264,50 @@ FERNET_KEY=vX1K4-z8_hYQ3mK6_2j8b1n3P9q7xW4_k5M8r0T2y1A=
 ADMIN_EMAIL=admin@example.com
 ADMIN_PASSWORD=AdminSecurePassword123!
 
-# Local Mosquitto Broker
+# Local Mosquitto Broker (internal Docker network port — do NOT change)
 MQTT_DEFAULT_HOST=mosquitto
 MQTT_DEFAULT_PORT=1883
 
-# Frontend Public URLs
-NEXT_PUBLIC_API_URL=http://localhost:8000
-NEXT_PUBLIC_WS_URL=ws://localhost:8000/ws
+# Host-exposed ports (change these to avoid conflicts on your VM)
+FRONTEND_PORT=7000
+BACKEND_PORT=7001
+MQTT_PORT=7003
+MQTT_WS_PORT=7004
+DB_PORT=7005
+
+# Frontend Public URLs (used by browser — set to your VM IP for remote access)
+NEXT_PUBLIC_API_URL=http://localhost:7001
+NEXT_PUBLIC_WS_URL=ws://localhost:7001/ws
+# Note: For Azure VM remote access, replace 'localhost' with your Azure VM Public IP or Domain
+# Example: NEXT_PUBLIC_API_URL=http://20.123.45.67:7001
+```
+
+---
+
+## Azure VM Deployment
+
+### Ports to open in Azure Network Security Group (NSG):
+
+| Port | Protocol | Purpose |
+|---|---|---|
+| `7000` | TCP | Frontend Web UI |
+| `7001` | TCP | Backend REST API & WebSocket |
+| `7003` | TCP | MQTT TCP (for external simulators/devices) |
+| `7004` | TCP | MQTT WebSocket |
+
+> **DB port `7005` should NOT be opened** — PostgreSQL should only be accessible internally.
+
+### Deploy / Update on Azure VM:
+```bash
+# Pull latest changes
+git pull origin main
+
+# Rebuild and restart containers
+docker compose up -d --build
+
+# Check status
+docker compose ps
+docker compose logs -f backend
 ```
 
 ---
@@ -256,4 +323,3 @@ NEXT_PUBLIC_WS_URL=ws://localhost:8000/ws
 ## License
 
 This project is licensed under the MIT License.
-
