@@ -150,8 +150,25 @@ class IoTSimulator:
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
 
+        humid_packet = {
+            "value": round(humidity, 1),
+            "humidity": round(humidity, 1),
+            "unit": "%",
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+
+        pressure_hpa = round(1013.25 + 5.0 * math.cos(t * 0.5) + random.uniform(-0.5, 0.5), 1)
+        pressure_packet = {
+            "value": pressure_hpa,
+            "pressure": pressure_hpa,
+            "unit": "hPa",
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+
         return [
             ("sensor/temperature", temp_packet),
+            ("sensor/humidity", humid_packet),
+            ("sensor/pressure", pressure_packet),
             ("test/sensor1", test_packet),
             ("factory/machine1/power", power_packet),
         ]

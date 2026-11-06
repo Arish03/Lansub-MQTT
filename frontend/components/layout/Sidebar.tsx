@@ -2,15 +2,48 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Radio, Server, Settings, Activity } from "lucide-react";
+import {
+  LayoutDashboard,
+  Radio,
+  Clock,
+  Cpu,
+  ShieldAlert,
+  Settings,
+  Activity,
+} from "lucide-react";
+import { useAppStore } from "@/lib/store";
 
 export function Sidebar() {
   const pathname = usePathname();
+  const wsConnected = useAppStore((state: any) => state.wsConnected);
+  const brokerStatuses = useAppStore((state: any) => state.brokerStatuses || {});
+  
+  // Determine if any broker is connected or default to wsConnected
+  const hasConnectedBroker =
+    Object.values(brokerStatuses).some((s) => s === "connected") || wsConnected;
 
-  const navItems = [
-    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Topics", href: "/settings/topics", icon: Radio },
-    { name: "Brokers", href: "/settings/brokers", icon: Server },
+  const sections = [
+    {
+      title: "Monitoring",
+      items: [
+        { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+        { name: "Live Data", href: "/livedata", icon: Radio },
+        { name: "History", href: "/history", icon: Clock },
+      ],
+    },
+    {
+      title: "Management",
+      items: [
+        { name: "Devices", href: "/devices", icon: Cpu },
+        { name: "Rules & Alarms", href: "/rules", icon: ShieldAlert },
+      ],
+    },
+    {
+      title: "Account",
+      items: [
+        { name: "Settings", href: "/settings", icon: Settings },
+      ],
+    },
   ];
 
   return (
@@ -31,29 +64,61 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-1">
-        <div className="px-3 pb-2 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-          Monitoring
-        </div>
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = pathname === item.href;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                isActive
-                  ? "bg-blue-50 text-blue-700"
-                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-              }`}
-            >
-              <Icon className={`w-4 h-4 ${isActive ? "text-blue-600" : "text-slate-400"}`} />
-              {item.name}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 px-3 py-4 space-y-5 overflow-y-auto">
+        {sections.map((section) => (
+          <div key={section.title} className="space-y-1">
+            <div className="px-3 pb-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+              {section.title}
+            </div>
+            {section.items.map((item) => {
+              const Icon = item.icon;
+              const isActive =
+                pathname === item.href ||
+                (item.href !== "/dashboard" && pathname.startsWith(item.href));
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
+                    isActive
+                      ? "bg-blue-50 text-blue-700 font-semibold"
+                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                  }`}
+                >
+                  <Icon
+                    className={`w-4 h-4 ${
+                      isActive ? "text-blue-600" : "text-slate-400"
+                    }`}
+                  />
+                  {item.name}
+                </Link>
+              );
+            })}
+          </div>
+        ))}
       </nav>
+
+      {/* MQTT Status Indicator Card */}
+      <div className="p-3 mx-3 mb-2 rounded-xl border border-slate-200 bg-slate-50/70">
+        <div className="flex items-center gap-2">
+          <span className="relative flex h-2 w-2">
+            {hasConnectedBroker && (
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            )}
+            <span
+              className={`relative inline-flex rounded-full h-2 w-2 ${
+                hasConnectedBroker ? "bg-emerald-500" : "bg-rose-500"
+              }`}
+            ></span>
+          </span>
+          <span className="text-xs font-semibold text-slate-800">
+            MQTT Status
+          </span>
+        </div>
+        <p className="text-[11px] text-slate-500 mt-0.5 ml-4">
+          {hasConnectedBroker ? "Connected to broker" : "Disconnected"}
+        </p>
+      </div>
 
       {/* Footer Info */}
       <div className="p-4 border-t border-slate-200 bg-slate-50/50">

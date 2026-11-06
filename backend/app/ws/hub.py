@@ -98,5 +98,30 @@ class WebSocketHub:
                 except Exception:
                     pass
 
+    async def broadcast_rule_triggered(
+        self,
+        owner_user_id: UUID,
+        title: str,
+        message: str,
+        severity: str = "danger",
+        rule_id: Optional[str] = None,
+        trigger_value: Optional[float] = None
+    ):
+        data = {
+            "type": "rule_triggered",
+            "title": title,
+            "message": message,
+            "severity": severity,
+            "rule_id": rule_id,
+            "trigger_value": trigger_value,
+        }
+        status_msg = json.dumps(data)
+        for ws, conn in list(self.connections.items()):
+            if conn.user_id == owner_user_id:
+                try:
+                    await ws.send_text(status_msg)
+                except Exception:
+                    pass
+
 
 ws_hub = WebSocketHub()

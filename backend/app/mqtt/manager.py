@@ -212,6 +212,18 @@ class BrokerClientWorker:
                     ts_iso=item["ts"].isoformat(),
                     alert=alert_status
                 )
+
+                # Evaluate automation rules & alarms
+                try:
+                    from app.services.rules import rule_engine
+                    await rule_engine.evaluate(
+                        user_id=self.user_id,
+                        topic=topic_str,
+                        value=item.get("value"),
+                        mqtt_manager=mqtt_manager
+                    )
+                except Exception as re_err:
+                    logger.debug(f"Rule evaluation error: {re_err}")
         else:
             # Resilient fallback: Broadcast raw packet to WebSocket so user sees it in Live Stream!
             raw_str = payload_bytes.decode("utf-8", errors="replace").strip()

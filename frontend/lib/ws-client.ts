@@ -1,6 +1,7 @@
 declare const process: any;
 import { getToken } from "./api";
 import { useAppStore } from "./store";
+import { useToastStore } from "./toast-store";
 
 function getWsBase(): string {
   const envUrl = process.env.NEXT_PUBLIC_WS_URL;
@@ -71,6 +72,21 @@ class WSClient {
           });
         } else if (data.type === "broker_status") {
           useAppStore.getState().setBrokerStatus(data.broker_id, data.status);
+        } else if (data.type === "rule_triggered") {
+          const toastType = data.severity === "danger" ? "error" : data.severity === "warning" ? "warning" : "info";
+          useToastStore.getState().addToast({
+            title: data.title || "🚨 Rule Triggered",
+            message: data.message || "An automated fail-safe was executed.",
+            type: toastType,
+          });
+
+          if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+            try {
+              new Notification(data.title || "Lansub Alert", {
+                body: data.message,
+              });
+            } catch {}
+          }
         }
       } catch (err) {
         console.error("Error parsing WS message:", err);

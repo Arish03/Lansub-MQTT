@@ -36,3 +36,9 @@ class UserOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class ProfileUpdate(BaseModel):
+    current_password: str
+    new_password: str
+

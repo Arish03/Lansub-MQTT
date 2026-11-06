@@ -115,4 +115,16 @@ export const api = {
   // Publish
   publish: (data: { broker_id: string; topic: string; payload: any; qos?: number; retain?: boolean }) =>
     request<{ success: boolean; message: string }>("/api/publish", { method: "POST", body: JSON.stringify(data) }),
+
+  // Rules & Alarms
+  getRules: () => request<any[]>("/api/rules"),
+  createRule: (data: any) => request<any>("/api/rules", { method: "POST", body: JSON.stringify(data) }),
+  updateRule: (id: string, data: any) => request<any>(`/api/rules/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteRule: (id: string) => request<void>(`/api/rules/${id}`, { method: "DELETE" }),
+  toggleRule: (id: string) => request<any>(`/api/rules/${id}/toggle`, { method: "POST" }),
+  getRuleLogs: (limit = 50) => request<any[]>(`/api/rules/logs?limit=${limit}`),
+
+  // Profile
+  updateProfile: (data: { current_password: string; new_password: string }) =>
+    request<{ message: string }>("/api/auth/profile", { method: "PUT", body: JSON.stringify(data) }),
 };

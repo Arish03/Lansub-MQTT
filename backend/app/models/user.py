@@ -17,3 +17,4 @@ class User(Base):
     brokers = relationship("Broker", back_populates="user", cascade="all, delete-orphan")
     topics = relationship("Topic", back_populates="user", cascade="all, delete-orphan")
     dashboards = relationship("Dashboard", back_populates="user", cascade="all, delete-orphan")
+    rules = relationship("Rule", back_populates="user", cascade="all, delete-orphan")

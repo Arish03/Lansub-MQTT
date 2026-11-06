@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useAppStore, topicMatches } from "@/lib/store";
-import { Gauge, AlertTriangle, Pencil, Trash2 } from "lucide-react";
+import { AlertTriangle, Pencil, Trash2 } from "lucide-react";
 
 interface GaugeWidgetProps {
   key?: any;
@@ -39,7 +39,11 @@ export function GaugeWidget({
   });
 
   const rawValue = useMemo(() => {
-    if (topicState?.latestValue !== null && topicState?.latestValue !== undefined && !isNaN(Number(topicState.latestValue))) {
+    if (
+      topicState?.latestValue !== null &&
+      topicState?.latestValue !== undefined &&
+      !isNaN(Number(topicState.latestValue))
+    ) {
       return Number(topicState.latestValue);
     }
     const p = topicState?.latestPayload;
@@ -52,11 +56,32 @@ export function GaugeWidget({
       if (typeof raw === "string") {
         const n = Number(raw);
         if (!isNaN(n)) return n;
-        try { return deepExtract(JSON.parse(raw)); } catch { return null; }
+        try {
+          return deepExtract(JSON.parse(raw));
+        } catch {
+          return null;
+        }
       }
       if (typeof raw === "object") {
-        if ("raw" in raw) { const r = deepExtract(raw.raw); if (r !== null) return r; }
-        for (const k of ["value", "temp", "temperature", "reading", "val", "data", "metric", "humidity", "pressure", "current", "voltage", "level", "speed"]) {
+        if ("raw" in raw) {
+          const r = deepExtract(raw.raw);
+          if (r !== null) return r;
+        }
+        for (const k of [
+          "value",
+          "temp",
+          "temperature",
+          "reading",
+          "val",
+          "data",
+          "metric",
+          "humidity",
+          "pressure",
+          "current",
+          "voltage",
+          "level",
+          "speed",
+        ]) {
           if (k in raw && raw[k] !== null && raw[k] !== undefined) {
             const v = typeof raw[k] === "number" ? raw[k] : Number(raw[k]);
             if (!isNaN(v)) return v;
@@ -82,8 +107,14 @@ export function GaugeWidget({
   const percentage = (clampedVal - min) / span;
 
   // Thresholds calculation
-  const warnLimit = warningThreshold !== undefined ? warningThreshold : min + span * 0.75;
-  const dangerLimit = dangerThreshold !== undefined ? dangerThreshold : min + span * 0.90;
+  const warnLimit =
+    warningThreshold !== undefined
+      ? warningThreshold
+      : Math.round((min + span * 0.75) * 10) / 10;
+  const dangerLimit =
+    dangerThreshold !== undefined
+      ? dangerThreshold
+      : Math.round((min + span * 0.9) * 10) / 10;
 
   const isDanger = currentVal >= dangerLimit;
   const isWarning = !isDanger && currentVal >= warnLimit;
@@ -95,7 +126,12 @@ export function GaugeWidget({
   const startAngle = 150;
   const totalAngle = 240;
 
-  const polarToCartesian = (cx: number, cy: number, r: number, angleInDegrees: number) => {
+  const polarToCartesian = (
+    cx: number,
+    cy: number,
+    r: number,
+    angleInDegrees: number
+  ) => {
     const angleInRadians = ((angleInDegrees - 90) * Math.PI) / 180.0;
     return {
       x: cx + r * Math.cos(angleInRadians),
@@ -103,11 +139,29 @@ export function GaugeWidget({
     };
   };
 
-  const describeArc = (x: number, y: number, r: number, startA: number, endA: number) => {
+  const describeArc = (
+    x: number,
+    y: number,
+    r: number,
+    startA: number,
+    endA: number
+  ) => {
     const start = polarToCartesian(x, y, r, endA);
     const end = polarToCartesian(x, y, r, startA);
     const largeArcFlag = endA - startA <= 180 ? "0" : "1";
-    return ["M", start.x, start.y, "A", r, r, 0, largeArcFlag, 0, end.x, end.y].join(" ");
+    return [
+      "M",
+      start.x,
+      start.y,
+      "A",
+      r,
+      r,
+      0,
+      largeArcFlag,
+      0,
+      end.x,
+      end.y,
+    ].join(" ");
   };
 
   const bgArc = useMemo(() => {
@@ -120,9 +174,9 @@ export function GaugeWidget({
   }, [percentage]);
 
   const colorClass = isDanger
-    ? "text-rose-500"
+    ? "text-rose-600"
     : isWarning
-    ? "text-amber-500"
+    ? "text-amber-600"
     : "text-blue-600";
 
   const strokeColor = isDanger
@@ -132,13 +186,15 @@ export function GaugeWidget({
     : "#2563eb";
 
   return (
-    <div className={`bg-white border rounded-xl p-5 shadow-sm transition-all flex flex-col justify-between group ${
-      isDanger
-        ? "border-rose-300 ring-2 ring-rose-100"
-        : isWarning
-        ? "border-amber-300"
-        : "border-slate-200 hover:border-slate-300"
-    }`}>
+    <div
+      className={`bg-white border rounded-2xl p-5 shadow-sm transition-all flex flex-col justify-between group ${
+        isDanger
+          ? "border-rose-300 ring-2 ring-rose-100 bg-rose-50/10"
+          : isWarning
+          ? "border-amber-300 bg-amber-50/10"
+          : "border-slate-200 hover:border-slate-300"
+      }`}
+    >
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
@@ -146,7 +202,11 @@ export function GaugeWidget({
             {title}
           </span>
           {(isDanger || isWarning) && (
-            <AlertTriangle className={`w-3.5 h-3.5 ${isDanger ? "text-rose-500 animate-bounce" : "text-amber-500"}`} />
+            <AlertTriangle
+              className={`w-3.5 h-3.5 ${
+                isDanger ? "text-rose-500 animate-bounce" : "text-amber-500"
+              }`}
+            />
           )}
         </div>
         <div className="flex items-center gap-1.5">
@@ -185,13 +245,18 @@ export function GaugeWidget({
       </div>
 
       {/* SVG Radial Gauge */}
-      <div className="flex flex-col items-center justify-center my-1 relative">
-        <svg width="170" height="130" viewBox="0 0 170 130" className="overflow-visible">
+      <div className="flex flex-col items-center justify-center my-2 relative">
+        <svg
+          width="170"
+          height="125"
+          viewBox="0 0 170 125"
+          className="overflow-visible"
+        >
           {/* Background Track */}
           <path
             d={bgArc}
             fill="none"
-            stroke="#e2e8f0"
+            stroke="#f1f5f9"
             strokeWidth={strokeWidth}
             strokeLinecap="round"
           />
@@ -209,36 +274,44 @@ export function GaugeWidget({
         </svg>
 
         {/* Center Value */}
-        <div className="absolute top-14 flex flex-col items-center">
-          <span className={`text-2xl font-bold font-mono tracking-tight ${colorClass}`}>
+        <div className="absolute top-12 flex flex-col items-center">
+          <span
+            className={`text-2xl font-extrabold font-mono tracking-tight ${colorClass}`}
+          >
             {hasValue ? currentVal.toFixed(1) : "--"}
           </span>
-          <span className="text-xs text-slate-400 font-medium">{unit}</span>
+          <span className="text-xs text-slate-400 font-semibold">{unit}</span>
         </div>
 
-        {/* Range Labels */}
-        <div className="w-full flex justify-between px-3 text-[11px] font-mono text-slate-400 -mt-2">
-          <span>{min}</span>
-          <span>{max}</span>
+        {/* Range and Thresholds matching reference screenshot */}
+        <div className="text-center -mt-1 space-y-0.5">
+          <div className="text-[11px] text-slate-500 font-medium font-mono">
+            Range: {min} – {max} {unit}
+          </div>
+          <div className="text-[10px] text-slate-400 font-mono">
+            Warning: {warnLimit} | Critical: {dangerLimit}
+          </div>
         </div>
       </div>
 
       {/* Footer Info */}
-      <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-        <span className="font-mono truncate max-w-[140px] text-slate-400" title={topic}>
+      <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+        <span
+          className="font-mono truncate max-w-[140px] text-slate-400"
+          title={topic}
+        >
           {topic}
         </span>
-        <span className="font-medium">
+        <span className="font-semibold">
           {isDanger ? (
-            <span className="text-rose-600 font-semibold">Critical High</span>
+            <span className="text-rose-600">Critical High</span>
           ) : isWarning ? (
-            <span className="text-amber-600 font-semibold">Warning</span>
+            <span className="text-amber-600">Warning</span>
           ) : (
-            <span className="text-slate-400">Normal</span>
+            <span className="text-emerald-600">Normal</span>
           )}
         </span>
       </div>
     </div>
   );
 }
-
