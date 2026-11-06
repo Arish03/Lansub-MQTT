@@ -119,71 +119,66 @@ export function GaugeWidget({
   const isDanger = currentVal >= dangerLimit;
   const isWarning = !isDanger && currentVal >= warnLimit;
 
-  // Arc calculations (240 degree gauge: from 150 deg to 390 deg)
-  const radius = 68;
-  const center = 85;
-  const strokeWidth = 10;
-  const startAngle = 150;
+  // Radial Gauge Geometry:
+  // Upward-facing arch (speedometer style) with opening at 6 o'clock (the bottom).
+  // Total angle = 240 degrees (leaves 120 degree opening at the bottom).
+  // Start angle = 240 deg (bottom-left at 8 o'clock), sweeping clockwise through 0/360 deg (top) to 480/120 deg (bottom-right at 4 o'clock).
+  const cx = 90;
+  const cy = 68;
+  const radius = 54;
+  const strokeWidth = 9;
+  const startAngle = 240;
   const totalAngle = 240;
 
   const polarToCartesian = (
-    cx: number,
-    cy: number,
+    centerX: number,
+    centerY: number,
     r: number,
     angleInDegrees: number
   ) => {
     const angleInRadians = ((angleInDegrees - 90) * Math.PI) / 180.0;
     return {
-      x: cx + r * Math.cos(angleInRadians),
-      y: cy + r * Math.sin(angleInRadians),
+      x: centerX + r * Math.cos(angleInRadians),
+      y: centerY + r * Math.sin(angleInRadians),
     };
   };
 
   const describeArc = (
-    x: number,
-    y: number,
+    centerX: number,
+    centerY: number,
     r: number,
     startA: number,
     endA: number
   ) => {
-    const start = polarToCartesian(x, y, r, endA);
-    const end = polarToCartesian(x, y, r, startA);
-    const largeArcFlag = endA - startA <= 180 ? "0" : "1";
-    return [
-      "M",
-      start.x,
-      start.y,
-      "A",
-      r,
-      r,
-      0,
-      largeArcFlag,
-      0,
-      end.x,
-      end.y,
-    ].join(" ");
+    const start = polarToCartesian(centerX, centerY, r, startA);
+    const end = polarToCartesian(centerX, centerY, r, endA);
+    const delta = endA - startA;
+    const largeArcFlag = delta > 180 ? 1 : 0;
+    // sweep-flag = 1 for clockwise progression
+    return `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} A ${r} ${r} 0 ${largeArcFlag} 1 ${end.x.toFixed(2)} ${end.y.toFixed(2)}`;
   };
 
   const bgArc = useMemo(() => {
-    return describeArc(center, center, radius, startAngle, startAngle + totalAngle);
-  }, []);
+    return describeArc(cx, cy, radius, startAngle, startAngle + totalAngle);
+  }, [cx, cy, radius, startAngle, totalAngle]);
 
   const progressArc = useMemo(() => {
-    const endA = startAngle + totalAngle * Math.max(0.001, percentage);
-    return describeArc(center, center, radius, startAngle, endA);
-  }, [percentage]);
+    const clampedPct = Math.max(0.001, Math.min(1, percentage));
+    const endA = startAngle + totalAngle * clampedPct;
+    return describeArc(cx, cy, radius, startAngle, endA);
+  }, [percentage, cx, cy, radius, startAngle, totalAngle]);
 
   const colorClass = isDanger
     ? "text-rose-600"
     : isWarning
-    ? "text-amber-600"
-    : "text-blue-600";
+    ? "text-amber-500"
+    : "text-emerald-600";
 
   const strokeColor = isDanger
     ? "#f43f5e"
     : isWarning
     ? "#f59e0b"
-    : "#2563eb";
+    : "#10b981";
 
   return (
     <div
@@ -247,9 +242,9 @@ export function GaugeWidget({
       {/* SVG Radial Gauge */}
       <div className="flex flex-col items-center justify-center my-2 relative">
         <svg
-          width="170"
-          height="125"
-          viewBox="0 0 170 125"
+          width="180"
+          height="112"
+          viewBox="0 0 180 112"
           className="overflow-visible"
         >
           {/* Background Track */}
@@ -274,7 +269,7 @@ export function GaugeWidget({
         </svg>
 
         {/* Center Value */}
-        <div className="absolute top-12 flex flex-col items-center">
+        <div className="absolute top-9 left-0 right-0 flex flex-col items-center pointer-events-none">
           <span
             className={`text-2xl font-extrabold font-mono tracking-tight ${colorClass}`}
           >
@@ -283,8 +278,8 @@ export function GaugeWidget({
           <span className="text-xs text-slate-400 font-semibold">{unit}</span>
         </div>
 
-        {/* Range and Thresholds matching reference screenshot */}
-        <div className="text-center -mt-1 space-y-0.5">
+        {/* Range and Thresholds placed cleanly beneath the open gauge arch */}
+        <div className="text-center mt-1.5 space-y-0.5">
           <div className="text-[11px] text-slate-500 font-medium font-mono">
             Range: {min} – {max} {unit}
           </div>
