@@ -7,25 +7,27 @@ Welcome to **Lansub MQTT**, a high-performance, real-time IoT telemetry streamin
 ## Table of Contents
 1. [Quick Start & Setup](#1-quick-start--setup)
 2. [User Authentication & Multi-Tenancy](#2-user-authentication--multi-tenancy)
-3. [Managing MQTT Brokers](#3-managing-mqtt-brokers)
-4. [Configuring Telemetry Topics & Thresholds](#4-configuring-telemetry-topics--thresholds)
-5. [Using the Live Dashboard & Widgets](#5-using-the-live-dashboard--widgets)
-   - [Telemetry Stat Card](#1-telemetry-stat-card)
-   - [Radial Gauge Dial](#2-radial-gauge-dial)
-   - [Realtime Line Chart](#3-realtime-line-chart)
-   - [Interactive Relay Switch](#4-interactive-relay-switch)
-   - [Action Button Trigger](#5-action-button-trigger)
-   - [Live Message Stream Table](#6-live-message-stream-table)
-6. [Adding, Editing & Deleting Widgets](#6-adding-editing--deleting-widgets)
-7. [Interactive Device Control (Publishing)](#7-interactive-device-control-publishing)
-8. [Running the Real-time Python IoT Simulator](#8-running-the-real-time-python-iot-simulator)
-9. [Threshold Alerts & Visual Alarms](#9-threshold-alerts--visual-alarms)
-10. [Exporting Telemetry Data (CSV)](#10-exporting-telemetry-data-csv)
-11. [Automated Backend Tests](#11-automated-backend-tests)
-12. [Data Retention Cleanup Worker](#12-data-retention-cleanup-worker)
-13. [Multi-User Data Isolation Test](#13-multi-user-data-isolation-test)
-14. [REST API & WebSocket Reference](#14-rest-api--websocket-reference)
-15. [Troubleshooting & FAQs](#15-troubleshooting--faqs)
+3. [Sidebar Navigation & Page Overview](#3-sidebar-navigation--page-overview)
+4. [Managing MQTT Brokers](#4-managing-mqtt-brokers)
+5. [Configuring Telemetry Topics & Thresholds](#5-configuring-telemetry-topics--thresholds)
+6. [Interactive Dashboard & Widget Library](#6-interactive-dashboard--widget-library)
+   - [Overview KPI Stat Cards](#1-overview-kpi-stat-cards)
+   - [Real-time Multi-Line Comparison Chart](#2-real-time-multi-line-comparison-chart)
+   - [Speedometer Radial Gauge Dial](#3-speedometer-radial-gauge-dial)
+   - [Interactive Relay Switch & Action Buttons](#4-interactive-relay-switch--action-buttons)
+   - [Recent Device Activity Table](#5-recent-device-activity-table)
+7. [Device Management & Digital Twin Registry](#7-device-management--digital-twin-registry)
+8. [Automation Rules & Alarm Engine](#8-automation-rules--alarm-engine)
+   - [Creating Automated Fail-Safe Rules](#creating-automated-fail-safe-rules)
+   - [Real-Time Toast Notifications & Alarm Logs](#real-time-toast-notifications--alarm-logs)
+9. [Live Data Streaming & Manual Publishing](#9-live-data-streaming--manual-publishing)
+10. [Historical Telemetry & CSV Export](#10-historical-telemetry--csv-export)
+11. [User Profile & System Settings](#11-user-profile--system-settings)
+12. [Running the Real-time Python IoT Simulator](#12-running-the-real-time-python-iot-simulator)
+13. [Automated Backend Tests](#13-automated-backend-tests)
+14. [Data Retention Cleanup Worker](#14-data-retention-cleanup-worker)
+15. [REST API & WebSocket Reference](#15-rest-api--websocket-reference)
+16. [Troubleshooting & FAQs](#16-troubleshooting--faqs)
 
 ---
 
@@ -127,19 +129,36 @@ The backend automatically provisions an initial admin account on launch (configu
 
 ---
 
-## 3. Managing MQTT Brokers
+## 3. Sidebar Navigation & Page Overview
 
-Navigate to **Brokers** in the sidebar navigation ([http://localhost:7000/settings/brokers](http://localhost:7000/settings/brokers)).
+The platform uses a dedicated sidebar providing intuitive, one-click access across all features:
+
+| Page | Route | Description |
+|---|---|---|
+| **Dashboard** | `/` | Main real-time KPI overview: Stat Cards, Multi-Line Chart, Speedometer Gauges, and Recent Device Activity table. |
+| **Live Data** | `/livedata` | Real-time streaming stream of incoming MQTT packets, with manual publishing drawer and topic filters. |
+| **History** | `/history` | Historical telemetry time-series analysis, custom date range filtering, and one-click CSV export. |
+| **Devices** | `/devices` | Digital Twin registry: device cards, online/offline heartbeat status, and MQTT connection management. |
+| **Rules & Alarms** | `/rules` | Automated fail-safe rule engine, condition-based automated publishing, and alarm event logs. |
+| **Settings** | `/settings` | User profile management, password change, active broker preferences, and system diagnostic info. |
+
+At the bottom of the sidebar, the **MQTT Status** indicator shows real-time broker connectivity (`Connected to broker` with a pulsing green indicator).
+
+---
+
+## 4. Managing MQTT Brokers
+
+Navigate to **Settings → Brokers** or **Devices**.
 
 ### 1. Pre-Configured Local Mosquitto
-The admin account is pre-configured with a local Mosquitto broker:
+The default installation comes pre-configured with a local Mosquitto broker:
 - **Name:** Local Mosquitto
-- **Host:** `mosquitto` (Docker internal DNS — do NOT use `localhost` here)
+- **Host:** `mosquitto` (Docker internal service name — do NOT use `localhost` here)
 - **Port:** `1883` (internal Docker network port)
 - **TLS:** Disabled
 
 ### 2. Adding Remote Brokers (EMQX, HiveMQ Cloud, AWS IoT, etc.)
-Click **Add Broker** and configure:
+Click **Add Broker** (or **+ Add Device** on the Devices page) and configure:
 
 | Field | Description | Example |
 |---|---|---|
@@ -155,9 +174,9 @@ Click **Test Connection** to verify network and credentials, then click **Add Br
 
 ---
 
-## 4. Configuring Telemetry Topics & Thresholds
+## 5. Configuring Telemetry Topics & Thresholds
 
-Navigate to **Topics** in the sidebar navigation ([http://localhost:7000/settings/topics](http://localhost:7000/settings/topics)).
+Navigate to **Settings → Topics** (or configure topics directly when creating widgets).
 
 Click **Add Topic** to register MQTT topic patterns to monitor.
 
@@ -181,115 +200,120 @@ Click **Add Topic** to register MQTT topic patterns to monitor.
 
 ---
 
-## 5. Using the Live Dashboard & Widgets
+## 6. Interactive Dashboard & Widget Library
 
-Navigate to **Dashboard** ([http://localhost:7000/dashboard](http://localhost:7000/dashboard)).
+Navigate to **Dashboard** (`/`).
 
-### Topbar Indicators
-- **Connection Badge**:
-  - `Live Connected` (Green pulse): WebSocket connected and receiving live fan-out packets.
-  - `Connecting...` (Red): Auto-reconnection backoff in progress.
-- **Active Alert Pill**:
-  - Displays when one or more topics exceed safe limits (e.g. `⚠️ 1 Active Alert`).
+### 1. Overview KPI Stat Cards
+- Displays key environmental and system metrics:
+  - **Temperature**: Current reading with real-time delta indicators.
+  - **Humidity**: Relative humidity percentage.
+  - **Pressure**: Atmospheric pressure in hPa.
+  - **Devices Online**: Active connected device count (e.g., `3 / 3`).
+- Cards dynamically display color-coded status badges: **Emerald** for Normal, **Amber** for Warning, and **Rose** for Critical High.
 
-### Built-in Widget Types
+### 2. Real-time Multi-Line Comparison Chart
+- Compares multiple sensor topics on the same synchronized time-series graph (e.g., **Humidity (%)** in blue vs. **Temperature (°C)** in red).
+- Interactive hover tooltips showing exact values and timestamps across all series.
+- Seamless time-range selector: `1h`, `24h`, and `7d`.
+- **CSV Export Button**: One-click download of all plotted series data.
 
-#### 1. Telemetry Stat Card
-- Displays current numeric metric, unit, and last received timestamp.
-- Outlines and pulses in amber/rose with an **Alert Badge** if safe thresholds are breached.
-- **Metric extraction**: Automatically parses JSON payloads, including deeply nested and double-encoded `raw` fields, to display the numeric value — not the raw JSON string.
+### 3. Speedometer Radial Gauge Dial
+- Upright vector arc dial with a $240^\circ$ sweep and an open opening at 6 o'clock (the bottom).
+- Large central reading and unit display.
+- Clearly separated bounds and limits below the opening:
+  `Range: 0 – 50 °C`
+  `Warning: 25 | Critical: 30`
+- Dynamic threshold indicators:
+  - **Normal**: Emerald track (`#10b981`)
+  - **Warning**: Amber track (`#f59e0b`)
+  - **Critical**: Rose track (`#f43f5e`) with pulsing alert badge.
 
-#### 2. Radial Gauge Dial
-- High-performance 240° vector arc dial.
-- Displays smooth stroke progress fill, center reading, and min/max bounds.
-- Dynamic color zones: **Blue** (Normal) → **Amber** (Warning) → **Rose** (Critical High).
+### 4. Interactive Relay Switch & Action Buttons
+- **Relay Switch**: Toggle state dispatches `ON` / `OFF` payloads to actuator topics like `control/relay1`.
+- **Action Button**: Trigger one-shot commands (e.g., *"Reboot Device"*, *"Emergency Stop"*).
 
-#### 3. Realtime Line Chart
-- Lightweight SVG time-series sparkline.
-- 1h, 24h, and 7d historical range filtering.
-- Seeded with database history on load, smoothly appending live points as packets arrive.
-- **CSV Download Button**: Instantly export historical time-series data to CSV.
-
-#### 4. Interactive Relay Switch
-- Bi-directional toggle button publishing `ON` / `OFF` payloads to control relays, lights, or pumps.
-- Visual status feedback upon dispatch.
-
-#### 5. Action Button Trigger
-- One-shot command button to dispatch arbitrary actions (e.g. *"Reboot Machine"*, *"Trigger Alarm"*, *"Reset Counter"*).
-- Configurable button labels, payload JSON/strings, and color styles (`primary`, `danger`, `emerald`).
-- Displays loading spinner during transit and a confirmation badge upon delivery.
-
-#### 6. Live Message Stream Table
-- Displays the continuous raw message stream across all subscribed topics.
-- Columns: Timestamp, Topic, Extracted Value, Raw Payload.
-- Highlights alert rows in subtle red/amber.
-- **Pause / Resume**: Freeze table rendering to inspect payloads without losing background stream.
-- **CSV Export**: Click the **CSV** button to export all currently buffered stream messages.
+### 5. Recent Device Activity Table
+- Tracks real-time telemetry events across registered devices.
+- Columns: `Timestamp`, `Device ID`, `Temperature`, `Humidity`, `Pressure`, and `Status` (`online` green pill / `offline` red pill).
 
 ---
 
-## 6. Adding, Editing & Deleting Widgets
+## 7. Device Management & Digital Twin Registry
 
-### Empty Dashboard State
-When you first open the dashboard with no saved widgets, you'll see an empty-state screen with an **"Add First Widget"** button. Click it to open the widget creation modal.
+Navigate to **Devices** (`/devices`).
 
-### Adding a Widget
-1. Click the blue **+ Add Widget** button in the top-right of the Dashboard.
-2. Select a **Widget Type**:
-   - **Stat Card** — live numeric metric display
-   - **Line Chart** — time-series sparkline with history
-   - **Gauge Dial** — radial arc dial (set Min, Max, and Unit)
-   - **Switch (Relay)** — MQTT toggle control (set Broker and Publish Topic)
-   - **Button (Action)** — one-shot command (set Broker, Topic, Label, Payload, and Style)
-3. Enter a **Widget Title**.
-4. Configure type-specific options (topic, bounds, broker, payload).
-5. Click **Add to Dashboard**.
-
-### Editing a Widget
-Each saved widget shows a small **Edit (✏️)** button that appears on hover (top-right corner of the card).
-
-1. Hover over the widget — the edit/delete toolbar becomes visible.
-2. Click ✏️ **Edit** to open the Edit Widget modal, pre-filled with current settings.
-3. Modify any fields (title, topic, min/max, broker, payload, etc.).
-4. Click **Save Changes**.
-
-### Deleting a Widget
-1. Hover over the widget to reveal the toolbar.
-2. Click 🗑️ **Delete** — a confirmation dialog appears.
-3. Confirm to permanently remove the widget from your dashboard.
-
-> [!NOTE]
-> Edit and Delete buttons are only shown on **saved widgets** (created via Add Widget). The empty-state preview is not editable.
+The **Device Registry** lets you group MQTT topics into logical physical assets:
+1. **Device Cards**: View device metadata, heartbeat status, and active telemetry topics.
+2. **Online/Offline Heartbeat Tracking**: Monitors MQTT Keep-Alive and LWT (Last Will and Testament) messages. Devices that stop sending heartbeats automatically transition to `offline`.
+3. **Adding a New Device**:
+   - Click **+ Add Device**.
+   - Enter **Device Name**, **Protocol** (`mqtt://` or `mqtts://`), **Host**, **Port**, and **Client ID**.
+   - Save to register the device in your registry.
 
 ---
 
-## 7. Interactive Device Control (Publishing)
+## 8. Automation Rules & Alarm Engine
 
-You can publish commands to devices directly from the UI or via REST API.
+Navigate to **Rules & Alarms** (`/rules`).
 
-### Via UI Controls
-* **Relay Switch**: Toggling the switch dispatches `ON` or `OFF` to topics like `control/relay1`.
-* **Action Button**: Clicking the button sends your pre-configured JSON or text payload to topics like `control/actions` or `factory/machine1/reset`.
+Execute automated fail-safes and trigger actions without human intervention.
 
-### Via REST API (`POST /api/publish`)
-Authenticate with your Bearer token and publish programmatically:
+### Creating Automated Fail-Safe Rules
+Click **+ New Rule** and configure:
 
-```bash
-curl -X POST http://localhost:7001/api/publish \
-  -H "Authorization: Bearer <YOUR_JWT_TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "broker_id": "<BROKER_UUID>",
-    "topic": "control/relay1",
-    "payload": "ON",
-    "qos": 0,
-    "retain": false
-  }'
-```
+1. **Rule Name**: e.g., *"Overheat Shutdown Rule"*.
+2. **Trigger Condition**:
+   - **Topic**: `sensor/temperature`
+   - **Operator**: `>` (supports `>`, `<`, `>=`, `<=`, `==`, `!=`)
+   - **Threshold Value**: `35`
+   - **Duration**: `120` seconds (e.g. condition must hold for 2 consecutive minutes).
+3. **Automated Action**:
+   - **Target Topic**: `control/relay1`
+   - **Payload**: `OFF`
+4. **Severity**: `Critical`, `Warning`, or `Info`.
+5. **Save Rule**: The engine immediately evaluates incoming MQTT messages against this rule.
+
+### Real-Time Toast Notifications & Alarm Logs
+- **Instant Toaster Alerts**: When a threshold is breached, a toast notification pops up in the top-right corner of the screen detailing the alarm topic and value.
+- **Alarm History Log**: View all triggered events, resolved timestamps, and automated action dispatch confirmations.
 
 ---
 
-## 8. Running the Real-time Python IoT Simulator
+## 9. Live Data Streaming & Manual Publishing
+
+Navigate to **Live Data** (`/livedata`).
+
+- **Live Stream Stream**: View incoming raw MQTT messages with payload inspection and freeze/pause controls.
+- **Manual Message Publishing**:
+  - Click **Publish Message**.
+  - Specify **Topic**, **QoS (0, 1, or 2)**, **Retain Flag**, and **Payload** (JSON or Plain Text).
+  - Click **Dispatch** — the backend immediately publishes the packet to the broker.
+
+---
+
+## 10. Historical Telemetry & CSV Export
+
+Navigate to **History** (`/history`).
+
+- Select any subscribed topic to review long-term historical trends.
+- Switch between `1 Hour`, `24 Hours`, `7 Days`, or `All Time`.
+- Click **Export CSV** to stream a clean `.csv` file containing timestamps, extracted numbers, and raw payloads.
+
+---
+
+## 11. User Profile & System Settings
+
+Navigate to **Settings** (`/settings`).
+
+- **Profile Settings**: Update display name, email, and view account roles.
+- **Change Password**: Update your account password securely using Argon2 hashing.
+- **Broker Connections**: View and manage all configured broker connections.
+- **System Diagnostics**: Check backend version, PostgreSQL connection health, and active WebSocket connection count.
+
+---
+
+## 12. Running the Real-time Python IoT Simulator
 
 The platform includes a dedicated, bidirectional Python simulator at [`scripts/simulator.py`](scripts/simulator.py).
 
@@ -322,36 +346,7 @@ python scripts/simulator.py --host localhost --port 7003 --interval 1.0
 
 ---
 
-## 9. Threshold Alerts & Visual Alarms
-
-Lansub MQTT includes a multi-layered threshold alert engine:
-
-1. **Setting Bounds:** In **Topics**, configure **Min Threshold** and **Max Threshold** (e.g. Min: `18`, Max: `30`).
-2. **Real-time Detection:** When incoming sensor data violates thresholds:
-   - The backend tags the WebSocket packet with `alert: "high"` or `alert: "low"`.
-3. **UI Indicators:**
-   - **Topbar:** Shows an active alert count pill (e.g. `⚠️ 1 Active Alert`).
-   - **StatCard:** Glows with an animated amber or red warning badge.
-   - **GaugeWidget:** Needle moves into the red danger zone and displays a warning symbol.
-   - **MessageTable:** Highlights the packet row in red/amber with a pulsing status dot.
-
----
-
-## 10. Exporting Telemetry Data (CSV)
-
-Telemetry data can be exported in two ways:
-
-### 1. Historical Telemetry from Line Charts
-- On any **Line Chart** widget, click the **CSV** button in the widget header.
-- The browser downloads a clean CSV file (`{topic}_{range}_export.csv`) containing `Timestamp (UTC)`, `Topic`, `Extracted Value`, and `Raw Payload` streamed from the backend API (`GET /api/topics/{id}/export-csv`).
-
-### 2. Live Stream Export from Message Table
-- In the **Live Message Stream** table, click the **CSV** button next to Pause/Resume.
-- The browser generates and downloads a CSV snapshot of all currently buffered live stream packets.
-
----
-
-## 11. Automated Backend Tests
+## 13. Automated Backend Tests
 
 The project includes an automated test suite verifying core logic:
 
@@ -365,10 +360,11 @@ python -m unittest discover backend/tests -v
 * `backend/tests/test_auth.py`: Password hashing (Argon2), JWT token generation/validation, Fernet credential encryption.
 * `backend/tests/test_ingest.py`: JSONPath parsing, dot-notation fallback extraction, numeric float handling, double-encoded raw payload extraction.
 * `backend/tests/test_api_crud.py`: Pydantic schema validation for Auth, Brokers, Topics, Dashboards, and Publish actions.
+* `backend/tests/test_rules.py`: Automated rule engine condition evaluation, schema validation, and fail-safe triggers.
 
 ---
 
-## 12. Data Retention Cleanup Worker
+## 14. Data Retention Cleanup Worker
 
 To prevent database bloat over long operating periods:
 * The backend runs a periodic **Retention Cleanup Worker** ([`backend/app/services/retention.py`](backend/app/services/retention.py)).
@@ -380,24 +376,7 @@ $$\text{Cutoff} = \text{Now} - \text{retain\_days}$$
 
 ---
 
-## 13. Multi-User Data Isolation Test
-
-To verify that users cannot view or manipulate each other's data:
-
-1. In your regular browser window, stay logged in as `admin@example.com`.
-2. Open an **Incognito / Private Browsing window**.
-3. Go to [http://localhost:7000/register](http://localhost:7000/register) and create an account:
-   - **Email:** `engineer@plant2.com`
-   - **Password:** `PlantPassword123!`
-4. In the incognito window:
-   - Notice that `engineer@plant2.com` has their own separate dashboard.
-   - Go to **Brokers** — none of the admin's brokers are visible.
-5. In the terminal, publish a message to a topic owned only by admin (`sensor/temperature`).
-6. Notice that the message **only** appears in the admin's browser session. The second user's WebSocket stream receives zero unauthorized packets.
-
----
-
-## 14. REST API & WebSocket Reference
+## 15. REST API & WebSocket Reference
 
 ### Interactive API Documentation
 - **Swagger UI:** [http://localhost:7001/docs](http://localhost:7001/docs)
@@ -411,6 +390,7 @@ To verify that users cannot view or manipulate each other's data:
 | `POST` | `/api/auth/register` | Register new user account |
 | `POST` | `/api/auth/login` | Authenticate and obtain JWT token |
 | `GET` | `/api/auth/me` | Fetch authenticated user profile |
+| `PUT` | `/api/auth/profile` | Update profile information and password |
 | `GET` | `/api/brokers` | List brokers owned by user |
 | `POST` | `/api/brokers` | Create new broker connection |
 | `POST` | `/api/brokers/test` | Test broker connection without saving |
@@ -422,12 +402,14 @@ To verify that users cannot view or manipulate each other's data:
 | `POST` | `/api/dashboards/widgets` | Add widget (`stat`, `line`, `gauge`, `switch`, `button`) |
 | `PUT` | `/api/dashboards/widgets/{id}` | Update existing widget config |
 | `DELETE` | `/api/dashboards/widgets/{id}` | Remove widget |
+| `GET` | `/api/rules` | Fetch automation rules and alarms |
+| `POST` | `/api/rules` | Create automated fail-safe rule |
 | `POST` | `/api/publish` | Publish MQTT message through broker |
 | `WS` | `/ws?token={jwt}` | Real-time WebSocket streaming endpoint |
 
 ---
 
-## 15. Troubleshooting & FAQs
+## 16. Troubleshooting & FAQs
 
 ### Q: How do I run the full platform on my local machine?
 Make sure Docker Desktop is running, then run:
