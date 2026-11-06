@@ -162,8 +162,8 @@ export default function RulesPage() {
   const handleToggle = async (ruleId: string, currentEnabled: boolean) => {
     try {
       await api.toggleRule(ruleId);
-      setRules((prev) =>
-        prev.map((r) => (r.id === ruleId ? { ...r, enabled: !currentEnabled } : r))
+      setRules((prev: any[]) =>
+        prev.map((r: any) => (r.id === ruleId ? { ...r, enabled: !currentEnabled } : r))
       );
     } catch (err: any) {
       alert(err.message || "Failed to toggle rule");
@@ -262,7 +262,7 @@ export default function RulesPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  {rules.map((rule) => {
+                  {rules.map((rule: any) => {
                     const isDanger = rule.severity === "danger";
                     return (
                       <div
@@ -394,7 +394,7 @@ export default function RulesPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 text-[11px]">
-                        {logs.map((log) => (
+                        {logs.map((log: any) => (
                           <tr key={log.id} className="hover:bg-slate-50/70 transition-colors">
                             <td className="py-2.5 px-3 text-slate-500 whitespace-nowrap">
                               {new Date(log.triggered_at).toLocaleString()}
@@ -635,3 +635,4 @@ export default function RulesPage() {
     </div>
   );
 }
+

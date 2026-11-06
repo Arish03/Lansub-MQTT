@@ -146,7 +146,7 @@ export default function DashboardPage() {
   const multiLineSeries: SeriesConfig[] = useMemo(() => {
     const defaultColors = ["#ef4444", "#3b82f6", "#10b981", "#8b5cf6", "#f59e0b"];
     if (topics.length > 0) {
-      return topics.slice(0, 4).map((t, idx) => ({
+      return topics.slice(0, 4).map((t: any, idx: number) => ({
         topic: t.pattern,
         label: `${t.label || t.pattern} (${t.unit || ""})`,
         color: defaultColors[idx % defaultColors.length],

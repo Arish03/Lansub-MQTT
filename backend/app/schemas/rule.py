@@ -63,3 +63,4 @@ class RuleLogOut(BaseModel):
 
     class Config:
         from_attributes = True
+

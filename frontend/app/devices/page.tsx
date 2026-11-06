@@ -158,7 +158,7 @@ export default function DevicesPage() {
                   </h2>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                    {devices.map((dev) => {
+                    {devices.map((dev: any) => {
                       const status = brokerStatuses[dev.id] || "connected";
                       const isOnline = status === "connected";
 
@@ -394,3 +394,4 @@ export default function DevicesPage() {
     </div>
   );
 }
+

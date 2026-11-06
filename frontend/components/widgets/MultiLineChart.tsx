@@ -11,6 +11,15 @@ export interface SeriesConfig {
   unit?: string;
 }
 
+interface Point {
+  value: number;
+  ts: string;
+}
+
+interface EnrichedSeries extends SeriesConfig {
+  points: Point[];
+}
+
 interface MultiLineChartProps {
   title?: string;
   series: SeriesConfig[];
@@ -24,10 +33,9 @@ export function MultiLineChart({
   const topicData = useAppStore((state: any) => state.topicData || {});
 
   // Extract numeric points for each series
-  const seriesPoints = useMemo(() => {
-    return series.map((s) => {
-      // Find matching topic state
-      let tState = topicData[s.topic];
+  const seriesPoints: EnrichedSeries[] = useMemo(() => {
+    return series.map((s: SeriesConfig) => {
+      let tState: any = topicData[s.topic];
       if (!tState) {
         for (const k of Object.keys(topicData)) {
           if (topicMatches(s.topic, k)) {
@@ -38,11 +46,11 @@ export function MultiLineChart({
       }
 
       const ringBuffer = tState?.ringBuffer || [];
-      const points = ringBuffer
+      const points: Point[] = ringBuffer
         .filter((p: any) => p.value !== null && p.value !== undefined && !isNaN(Number(p.value)))
         .map((p: any) => ({
           value: Number(p.value),
-          ts: p.ts,
+          ts: String(p.ts || ""),
         }));
 
       return {
@@ -54,11 +62,11 @@ export function MultiLineChart({
 
   // Overall min and max across all series for unified scaling
   const { allPointsCount, globalMin, globalMax, formattedTimestamps } = useMemo(() => {
-    let allVals: number[] = [];
-    let tsList: string[] = [];
+    const allVals: number[] = [];
+    const tsList: string[] = [];
 
-    seriesPoints.forEach((sp) => {
-      sp.points.forEach((pt) => {
+    seriesPoints.forEach((sp: EnrichedSeries) => {
+      sp.points.forEach((pt: Point) => {
         allVals.push(pt.value);
         tsList.push(pt.ts);
       });
@@ -77,7 +85,13 @@ export function MultiLineChart({
     const step = Math.max(1, Math.floor(uniqueTs.length / 5));
     const sampleTs: string[] = [];
     for (let i = 0; i < uniqueTs.length; i += step) {
-      sampleTs.push(new Date(uniqueTs[i]).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+      sampleTs.push(
+        new Date(uniqueTs[i]).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        })
+      );
       if (sampleTs.length >= 5) break;
     }
 
@@ -102,16 +116,16 @@ export function MultiLineChart({
   const spread = globalMax - globalMin || 1;
 
   const paths = useMemo(() => {
-    return seriesPoints.map((sp) => {
-      if (sp.points.length === 0) return { ...sp, path: "", latest: null };
+    return seriesPoints.map((sp: EnrichedSeries) => {
+      if (sp.points.length === 0) return { ...sp, path: "", latest: null as number | null };
 
-      const pts = sp.points.map((p, idx) => {
+      const pts = sp.points.map((p: Point, idx: number) => {
         const x = padLeft + (idx / Math.max(1, sp.points.length - 1)) * chartW;
         const y = padTop + chartH - ((p.value - globalMin) / spread) * chartH;
         return { x, y };
       });
 
-      const lineCmd = pts.reduce((acc, curr, idx) => {
+      const lineCmd = pts.reduce((acc: string, curr: { x: number; y: number }, idx: number) => {
         return idx === 0 ? `M ${curr.x} ${curr.y}` : `${acc} L ${curr.x} ${curr.y}`;
       }, "");
 
@@ -125,11 +139,11 @@ export function MultiLineChart({
 
   // CSV Export
   const handleExportCsv = () => {
-    const rows: string[] = ["Timestamp," + series.map((s) => `"${s.label} (${s.unit || ""})"`).join(",")];
+    const rows: string[] = ["Timestamp," + series.map((s: SeriesConfig) => `"${s.label} (${s.unit || ""})"`).join(",")];
     const tsMap: Record<string, Record<string, number | string>> = {};
 
-    seriesPoints.forEach((sp) => {
-      sp.points.forEach((p) => {
+    seriesPoints.forEach((sp: EnrichedSeries) => {
+      sp.points.forEach((p: Point) => {
         if (!tsMap[p.ts]) tsMap[p.ts] = {};
         tsMap[p.ts][sp.topic] = p.value;
       });
@@ -137,9 +151,9 @@ export function MultiLineChart({
 
     Object.keys(tsMap)
       .sort()
-      .forEach((ts) => {
+      .forEach((ts: string) => {
         const row = [ts];
-        series.forEach((s) => {
+        series.forEach((s: SeriesConfig) => {
           row.push(tsMap[ts][s.topic] !== undefined ? String(tsMap[ts][s.topic]) : "");
         });
         rows.push(row.join(","));
@@ -233,7 +247,7 @@ export function MultiLineChart({
             })}
 
             {/* X-axis time marks */}
-            {formattedTimestamps.map((ts, idx) => {
+            {formattedTimestamps.map((ts: string, idx: number) => {
               const x = padLeft + (idx / Math.max(1, formattedTimestamps.length - 1)) * chartW;
               return (
                 <text

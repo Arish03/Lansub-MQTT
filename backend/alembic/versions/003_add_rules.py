@@ -57,3 +57,4 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_table('rule_execution_logs')
     op.drop_table('rules')
+

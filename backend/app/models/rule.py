@@ -52,3 +52,4 @@ class RuleExecutionLog(Base):
     action_taken = Column(String(500), nullable=True)
 
     rule = relationship("Rule", back_populates="logs")
+

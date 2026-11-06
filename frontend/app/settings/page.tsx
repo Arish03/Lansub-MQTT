@@ -36,7 +36,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     api.getMe()
-      .then((data) => setUser(data))
+      .then((data: any) => setUser(data))
       .catch(() => {});
 
     api.getBrokers()
@@ -317,3 +317,4 @@ export default function SettingsPage() {
     </div>
   );
 }
+
