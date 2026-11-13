@@ -10,6 +10,9 @@ import {
   ShieldAlert,
   Settings,
   Activity,
+  SlidersHorizontal,
+  Box,
+  Bot,
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 
@@ -35,7 +38,15 @@ export function Sidebar() {
       title: "Management",
       items: [
         { name: "Devices", href: "/devices", icon: Cpu },
+        { name: "Topics & Thresholds", href: "/topics", icon: SlidersHorizontal },
         { name: "Rules & Alarms", href: "/rules", icon: ShieldAlert },
+      ],
+    },
+    {
+      title: "Next-Gen Labs",
+      items: [
+        { name: "Digital Twin", href: "/digital-twin", icon: Box, badge: "Soon" },
+        { name: "AI Copilot", href: "/chatbot", icon: Bot, badge: "Soon" },
       ],
     },
     {
@@ -86,11 +97,16 @@ export function Sidebar() {
                   }`}
                 >
                   <Icon
-                    className={`w-4 h-4 ${
+                    className={`w-4 h-4 shrink-0 ${
                       isActive ? "text-blue-600" : "text-slate-400"
                     }`}
                   />
-                  {item.name}
+                  <span className="truncate">{item.name}</span>
+                  {item.badge && (
+                    <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-indigo-100 text-indigo-700 tracking-wide uppercase">
+                      {item.badge}
+                    </span>
+                  )}
                 </Link>
               );
             })}

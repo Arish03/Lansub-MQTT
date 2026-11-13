@@ -1,23 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Sidebar } from "@/components/layout/Sidebar";
-import { Topbar } from "@/components/layout/Topbar";
-import { api } from "@/lib/api";
-import { wsClient } from "@/lib/ws-client";
-import { Radio, Plus, Trash2, Tag, Database, Loader2, Info } from "lucide-react";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
-export default function TopicsPage() {
-  const [topics, setTopics] = useState<any[]>([]);
-  const [brokers, setBrokers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [saving, setSaving] = useState(false);
+export default function LegacyTopicsPage() {
+  const router = useRouter();
+  useEffect(() => {
+    router.replace("/topics");
+  }, [router]);
 
-  // Form
-  const [brokerId, setBrokerId] = useState("");
-  const [pattern, setPattern] = useState("");
-  const [label, setLabel] = useState("");
+  return (
+    <div className="flex h-screen items-center justify-center bg-slate-50">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+    </div>
+  );
+}
   const [qos, setQos] = useState(0);
   const [payloadFormat, setPayloadFormat] = useState<"json" | "text" | "number">("json");
   const [valuePath, setValuePath] = useState("");

@@ -244,7 +244,7 @@ export default function SettingsPage() {
                 </Link>
 
                 <Link
-                  href="/settings/topics"
+                  href="/topics"
                   className="flex items-center justify-between p-3 rounded-xl bg-slate-50 hover:bg-blue-50 border border-slate-200/80 transition-all group"
                 >
                   <div className="flex items-center gap-3">
