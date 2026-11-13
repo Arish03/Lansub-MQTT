@@ -16,6 +16,18 @@ import {
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 
+interface NavItem {
+  name: string;
+  href: string;
+  icon: any;
+  badge?: string;
+}
+
+interface NavSection {
+  title: string;
+  items: NavItem[];
+}
+
 export function Sidebar() {
   const pathname = usePathname();
   const wsConnected = useAppStore((state: any) => state.wsConnected);
@@ -25,7 +37,7 @@ export function Sidebar() {
   const hasConnectedBroker =
     Object.values(brokerStatuses).some((s) => s === "connected") || wsConnected;
 
-  const sections = [
+  const sections: NavSection[] = [
     {
       title: "Monitoring",
       items: [
