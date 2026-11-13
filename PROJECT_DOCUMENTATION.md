@@ -483,3 +483,4 @@ You can verify the automated rule engine:
 - [ ] Verify **MQTT Status** indicator at the bottom-left shows `Connected to broker`
 - [ ] Launch `python scripts/simulator.py --host localhost --port 7003`
 - [ ] Watch real-time multi-line charts, speedometer radial gauges, and recent activity tables populate live!
+

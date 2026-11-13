@@ -260,3 +260,4 @@ TOPIC_ID=$(curl -s -X POST "$BASE_URL/topics" \
 echo "Topic created with ID: $TOPIC_ID"
 echo "Ready to stream data to broker.hivemq.com on lansub/demo/temperature!"
 ```
+
